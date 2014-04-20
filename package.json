@@ -1,0 +1,32 @@
+{
+  "name": "shipright",
+  "version": "0.0.0",
+  "description": "open source github clone in node.",
+  "main": "shipright.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/martindale/shipright.git"
+  },
+  "author": "Eric Martindale",
+  "license": "GPLv3",
+  "readmeFilename": "README.md",
+  "dependencies": {
+    "passport": "~0.1.16",
+    "jade": "~0.28.2",
+    "passport-local-mongoose": "~0.2.1",
+    "express": "~3.4.5",
+    "mongoose": "~3.8.1",
+    "passport-local": "~0.1.6",
+    "less-middleware": "~0.1.14",
+    "mongoose-slug": "~1.3.0",
+    "flashify": "~0.1.2",
+    "underscore": "~1.6.0",
+    "async": "~0.7.0",
+    "nodegit": "~0.1.1",
+    "connect-redis": "~1.4.7",
+    "redis": "~0.10.1"
+  }
+}

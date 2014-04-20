@@ -1,0 +1,18 @@
+extends layout
+
+block content
+  h1 Projects Using Maki
+  p Here's a list of projects that are built using Maki, or are using Maki as a reference stack for their own application.
+
+  hr
+
+  ul.media-list
+    for example in resource
+      li.media
+        //-if (example.image)
+          a.pull-left(href="#{example.uri}")
+            img.media-object(src="#{example.image}")
+        .media-body
+          h2.media-heading
+            a(href="#{example.uri}") #{example.name}
+          p #{example.description}

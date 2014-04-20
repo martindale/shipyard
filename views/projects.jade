@@ -1,0 +1,12 @@
+extends layout
+
+block content
+
+  a.btn.btn-default.pull-right(href="/projects/new") Create New &raquo;
+
+  h1
+    a(href="/projects") Projects
+
+  .row
+    each project in projects
+      .project #{project.name}

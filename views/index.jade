@@ -1,0 +1,49 @@
+extends layout
+
+block content
+  if (user)
+    h1 Welcome, #{user.username}!
+
+    .row
+      .col-md-8
+        ul.nav.nav-list
+          each activity in activities
+            li
+              a(href="/activities/#{activity._id}") #{activity._id}
+
+      .col-md-4
+        h2
+          a(href="/projects") Projects
+        ul.nav.nav-list
+          each project in projects
+            li
+              a(href="/#{project._owner.slug}/#{project.slug}") #{project.name}
+      
+  else
+    .jumbotron
+
+      img.pull-left.size-10.pad-right(src="/img/shipright.svg")
+
+      h1 shipright.
+      p build and ship better software, <em>together</em>.
+
+    .row
+      .col-md-4
+        h2
+          a(href="/projects") Projects
+        ul.nav.nav-list
+          each project in projects
+            li
+              a(href="/#{project._owner.slug}/#{project.slug}") #{project.name}
+      .col-md-4
+        h2 Recently...
+        ul.nav.nav-list
+          each activity in activities
+            li
+              a(href="/activities/#{activity._id}") #{activity._id}
+      .col-md-4
+        h2 Already registered?
+        include forms/login
+
+    .row
+      hr

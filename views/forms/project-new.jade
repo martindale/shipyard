@@ -1,0 +1,9 @@
+form(action="/projects", method="post", role="form")
+  .form-group
+    label(for="name") Name
+    input.form-control(type="text", name="name", placeholder="My Awesome Project")
+  .form-group
+    label(for="description") Description
+    textarea.form-control(type="text", name="description", placeholder="My thing is _awesome_.  Here's why...")
+
+  button.btn.btn-primary.pull-right(type="submit") Create &raquo;

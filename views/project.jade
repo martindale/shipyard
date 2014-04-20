@@ -1,0 +1,12 @@
+extends layout
+
+block content
+  h1
+    a(href="/#{project._owner.slug}") #{project._owner.slug}
+    | /#{project.name}
+
+  pre http://localhost:9200/#{project._owner.slug}/#{project.slug}
+
+  h2 Commits
+  each commit in commits
+    pre #{commit}
