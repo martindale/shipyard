@@ -8,6 +8,8 @@ var express = require('express')
   , RedisStore = require('connect-redis')(express)
   , redis = require('redis');
 
+var moment = require('moment');
+
 var sessionStore = new RedisStore();
 
 config   = require('./config');
@@ -21,6 +23,7 @@ config.git.data.path = __dirname + '/' + config.git.data.path;
 _     = require('underscore');
 async = require('async');
 Git   = require('nodegit');
+git   = require('gitty'); // thanks, @gordonwritescode!
 
 Account = People  = require('./models/Account').Account;
 Organization      = require('./models/Organization').Organization;
@@ -37,6 +40,7 @@ var issues        = require('./controllers/issues');
 
 // make the HTML output readible, for designers. :)
 app.locals.pretty = true;
+app.locals.moment = moment;
 
 app.use(require('less-middleware')({ 
     debug: true
@@ -159,15 +163,16 @@ app.get('/projects',                          projects.list );
 app.get('/projects/new', requireLogin ,       projects.createForm );
 app.post('/projects',    requireLogin ,       projects.create );
 
-app.get('/:actorSlug/:projectSlug',        projects.view );
-app.get('/:actorSlug/:projectSlug/issues', projects.listIssues );
+app.get('/:actorSlug/:projectSlug',                         projects.view );
+app.get('/:actorSlug/:projectSlug/tree/:branchName',        projects.view );
+app.get('/:actorSlug/:projectSlug/issues',                  projects.listIssues );
 
 function setupRepo(req, res, next) {
   req.params.uniqueSlug = req.param('actorSlug') + '/' + req.param('projectSlug');
   next();
 }
-app.get('/:actorSlug/:projectSlug.git/info/refs', setupRepo , projects.git.refs );
-
+app.get('/:actorSlug/:projectSlug.git/info/refs',               setupRepo , projects.git.refs );
+app.get('/:actorSlug/:projectSlug/blob/:branchName/:filePath',  setupRepo , projects.viewBlob );
 
 app.get('/:organizationSlug', organizations.view );
 app.get('/:usernameSlug',     people.view );

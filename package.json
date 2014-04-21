@@ -27,6 +27,7 @@
     "async": "~0.7.0",
     "nodegit": "~0.1.1",
     "connect-redis": "~1.4.7",
-    "redis": "~0.10.1"
+    "redis": "~0.10.1",
+    "moment": "~2.6.0"
   }
 }

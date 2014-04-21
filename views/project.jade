@@ -7,6 +7,51 @@ block content
 
   pre http://localhost:9200/#{project._owner.slug}/#{project.slug}
 
-  h2 Commits
-  each commit in commits
-    pre #{commit}
+  .dropdown
+    a.btn.btn-default(href="/#{project._owner.slug}/#{project.slug}/branches", data-toggle="dropdown") 
+      i.fa.fa-code-fork
+      |  branch: #{branch} 
+      i.fa.fa-caret-down
+    ul.dropdown-menu(role="menu")
+      each availableBranch in branches
+        li(class=((branch == availableBranch) ? 'active' : undefined))
+          a(href="/#{project._owner.slug}/#{project.slug}/tree/#{availableBranch}") #{availableBranch}
+
+  .row
+    .col-md-12
+      .tabbable.tabs-right
+        .nav.nav-tabs
+          li.active
+            a(href="#code", data-toggle="tab")
+              i.fa.fa-code
+              |  Code
+          li
+            a(href="#issues", data-toggle="tab")
+              i.fa.fa-warning
+              |  Issues
+          li
+            a(href="#docks", data-toggle="tab")
+              i.fa.fa-users
+              |  Docks
+
+        .tab-content
+          .tab-pane.active#code
+            h2 Commits
+            each commit in commits
+              pre #{JSON.stringify(commit)}
+
+            h2 Code
+            table.table
+              each file in files
+                tr
+                  td
+                    a(href="/#{project._owner.slug}/#{project.slug}/blob/#{branch}/#{file.name}") #{file.name}
+                  td
+                    a(href="") #{file.commit.msg}
+                  td
+                    a(href="") #{moment(file.commit.timestamp).fromNow()}
+
+          .tab-pane#issues
+            h2 Issues
+          .tab-pane#docks
+            h2 Docks

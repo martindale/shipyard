@@ -32,7 +32,7 @@ ProjectSchema.statics.lookup = function( uniqueSlug , callback) {
     Project.findOne({
         _owner: actor._id
       , slug: projectSlug
-    }).populate('_owner').lean().exec(function(err, project) {
+    }).populate('_owner').exec(function(err, project) {
       if (!project) { return callback(404); }
       callback( err , project);
     });

@@ -22,6 +22,24 @@ module.exports = {
       });
     }
   },
+  viewBlob: function(req, res, next) {
+    Project.lookup( req.param('uniqueSlug') , function(err, project) {
+      if (!project) { return next(); }
+
+      var command = 'cd ' + project.path + ' && git show ' + req.param('branchName') + ':' + req.param('filePath');
+      console.log(command);
+      exec( command , function(err, stdout, stderr) {
+        res.provide( err , {
+          file: {
+              name: req.param('filePath')
+            , contents: stdout
+          }
+        } , {
+          template: 'file'
+        });
+      });
+    });
+  },
   view: function(req, res, next) {
     Actor.findOne({ slug: req.param('actorSlug') }).exec(function(err, actor) {
       if (!actor) { return next(); }
@@ -40,41 +58,66 @@ module.exports = {
         }
 
         context.findOne({ _id: project._owner.target }, function(err, owner) {
+          if (err) { console.log(err); }
 
           project._owner = owner;
+          project.path = config.git.data.path + '/' + project._id; // remove with lean()
 
-          Git.Repo.open( config.git.data.path + '/' + project._id , function(err, repo) {
+          var repo = git( config.git.data.path + '/' + project._id );
+
+          var branch = req.param('branchName') || 'master';
+
+          exec('cd '+project.path+ ' && git ls-tree ' + branch, function(err, stdout, stderr) {
             if (err) { console.log(err); }
 
-            repo.getMaster(function(err, branch) {
-              if (err) { console.log(err); }
+            var tree = stdout.split('\n').map(function(x) {
+              var parts = x.split(/\s/);
+              return {
+                  attributes: parts[0]
+                , type:       parts[1]
+                , id:         parts[2]
+                , name:       parts[3]
+              };
+            });
 
-              var commits = [];
+            // remove erroneous blank entry
+            tree = _.filter( tree , function(x) {
+              return x.name;
+            });
 
-              // TODO: cache these values
-              var history = branch.history();
-              var count = 0;
+            tree.sort(function(a, b) {
+              if (a.name < b.name) return -1;
+              if (a.name > b.name) return 1;
+              return 0;
+            });
 
-              history.on('commit', function(commit) {
-                if (++count >= 9) {
-                  return;
-                }
+            async.parallel(tree.map(function(x) {
+              return function(done) {
 
-                commits.push( commit );
-              });
+                x.commit = {
+                  timestamp: new Date()
+                };
 
-              history.on('end', function() {
-                res.provide( err , {
-                    project: project
-                  , repo: repo
-                  , commits: commits
-                } , {
-                  template: 'project'
+                done( null , x );
+              };
+            }), function(err, completedTree) {
+              console.log(completedTree)
+
+              exec('cd '+project.path+' && git for-each-ref --format=\'%(refname:short)\' refs/heads/', function(err, stdout, stderr) {
+                var branches = stdout.split('\n');
+                repo.log(function(err, log) {
+                  res.provide( err , {
+                      project: project
+                    , repo: repo
+                    , branch: branch
+                    , branches: branches
+                    , commits: log
+                    , files: completedTree
+                  } , {
+                    template: 'project'
+                  });
                 });
               });
-
-              history.start();
-
             });
           });
         });

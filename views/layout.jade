@@ -1,7 +1,7 @@
 !!! 5
 html
   head
-    title Maki
+    title shipright
 
     link(rel="stylesheet", href="/css/bootstrap.css")
     link(rel="stylesheet", href="/css/fontawesome/font-awesome.css")
@@ -9,15 +9,10 @@ html
 
     script(src="/js/jquery.js")
     script(src="/js/bootstrap.js")
-    script(src="/js/angular.js")
-    script(src="/js/angular-route.js")
-    script(src="/js/angular-resource.js")
+    script(src="//s3.amazonaws.com/intercoolerjs.org/release/intercooler-0.0.1.min.js")
     script(src="/js/maki.js")
 
-    //-base(href="/")
-
-  body(data-ng-app="maki")
-
+  body
     .navbar.navbar-default.navbar-fixed-top
       .container
         .navbar-header
@@ -48,7 +43,7 @@ html
           ul.nav.navbar-nav.navbar-right
             if (user)
               li
-                a(href="/people/#{user.slug}") #{user.username}
+                a(href="/#{user.slug}") #{user.username}
               li
                 a(href="/logout") Log Out
             else
@@ -60,8 +55,6 @@ html
       include partials/flash
 
       block content
-
-      .other-content(data-ng-view)
 
     footer
       .container
