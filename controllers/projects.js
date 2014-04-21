@@ -6,7 +6,7 @@ module.exports = {
 
   },
   list: function(req, res, next) {
-    Project.find().exec(function(err, projects) {
+    Project.find().populate('_owner').exec(function(err, projects) {
       res.provide( err , { projects: projects } , {
         template: 'projects'
       });
