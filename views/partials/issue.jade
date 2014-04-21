@@ -1,0 +1,8 @@
+tr
+  td
+    a(href="/#{project._owner.slug}/#{project.slug}/issues/#{issue.id}") ##{issue.id}
+  td
+    a(href="/#{project._owner.slug}/#{project.slug}/issues/#{issue.id}") #{issue.name}
+  td
+    - var person = issue._creator
+    include person

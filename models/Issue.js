@@ -6,23 +6,23 @@ var mongoose = require('mongoose')
 
 // this defines the fields associated with the model,
 // and moreover, their type.
-var UserSchema = new Schema({
-    username: { type: String, required: true }
-  , email: { type: String, required: true }
+var IssueSchema = new Schema({
+    id: { type: Number, required: true }
+  , name: { type: String, required: true }
+  , description: { type: String }
+  , status: { type: String, enum: ['open', 'closed'], default: 'open' }
   , created: { type: Date, required: true, default: Date.now }
+  , closed: { type: Date, default: Date.now }
+  , _project: { type: ObjectId, ref: 'Project', required: true }
+  , _creator: { type: ObjectId, ref: 'Account', required: true }
+  , _assignees: [ { type: ObjectId, ref: 'Account' } ]
 });
 
-// attach the passport fields to the model
-UserSchema.plugin(passportLocalMongoose);
+IssueSchema.index({ _project: 1, id: 1 }, { unique: true });
 
-// attach a URI-friendly slug
-UserSchema.plugin( slug( 'username' , {
-  required: true
-}) );
-
-var User = mongoose.model('User', UserSchema);
+var Issue = mongoose.model('Issue', IssueSchema);
 
 // export the model to anything requiring it.
 module.exports = {
-  User: User
+  Issue: Issue
 };

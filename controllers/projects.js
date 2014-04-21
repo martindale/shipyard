@@ -30,7 +30,8 @@ module.exports = {
       var command = 'cd ' + project.path + ' && git show ' + req.param('branchName') + ':' + req.param('filePath');
       exec( command , function(err, stdout, stderr) {
 
-        var contents = stdout;
+        var raw = stdout;
+        var contents = raw;
         var type = mime.lookup( req.param('filePath') );
 
         // TODO: build a better handler
@@ -41,10 +42,12 @@ module.exports = {
         }
 
         res.provide( err , {
+          project: project,
           file: {
               name: req.param('filePath')
             , type: type
             , contents: contents
+            , raw: raw
           }
         } , {
           template: 'file'
@@ -56,89 +59,106 @@ module.exports = {
     Project.lookup( req.param('uniqueSlug') , function(err, project) {
       if (!project) { return next(); }
 
-      var context = Account;
+      async.parallel([
+        function(done) {
+          Issue.find({ _project: project._id }).populate('_creator').exec( done );
+        },
+        function(done) {
+          Issue.find({ _project: project._id }).populate('_creator').exec( done );
+        }
+      ], function(err, results) {
 
-      switch (project._owner.type) {
-        case 'Account':      var context = Account;      break;
-        case 'Organization': var context = Organization; break;
-      }
+        var issues = results[0];
+        var docks  = results[1];
 
-      context.findOne({ _id: project._owner.target }, function(err, owner) {
-        if (err) { console.log(err); }
+        // temporary hack until we get Organizations
+        var context = Account;
 
-        project._owner = owner;
-        project.path = config.git.data.path + '/' + project._id; // remove with lean()
+        switch (project._owner.type) {
+          case 'Account':      var context = Account;      break;
+          case 'Organization': var context = Organization; break;
+        }
 
-        var repo = git( config.git.data.path + '/' + project._id );
-
-        var branch = req.param('branchName') || 'master';
-
-        exec('cd '+project.path+ ' && git ls-tree ' + branch, function(err, stdout, stderr) {
+        context.findOne({ _id: project._owner.target }, function(err, owner) {
           if (err) { console.log(err); }
 
-          var tree = stdout.split('\n').map(function(x) {
-            var parts = x.split(/\s/);
-            return {
-                attributes: parts[0]
-              , type:       parts[1]
-              , id:         parts[2]
-              , name:       parts[3]
-            };
-          });
+          project._owner = owner;
+          project.path = config.git.data.path + '/' + project._id; // remove with lean()
 
-          // remove erroneous blank entry
-          tree = _.filter( tree , function(x) {
-            return x.name;
-          });
+          var repo = git( config.git.data.path + '/' + project._id );
 
-          tree.sort(function(a, b) {
-            if (a.name < b.name) return -1;
-            if (a.name > b.name) return 1;
-            return 0;
-          });
+          var branch = req.param('branchName') || 'master';
 
-          async.parallel(tree.map(function(x) {
-            return function(done) {
+          exec('cd '+project.path+ ' && git ls-tree ' + branch, function(err, stdout, stderr) {
+            if (err) { console.log(err); }
 
-              x.commit = {
-                timestamp: new Date()
+            var tree = stdout.split('\n').map(function(x) {
+              var parts = x.split(/\s/);
+              return {
+                  attributes: parts[0]
+                , type:       parts[1]
+                , id:         parts[2]
+                , name:       parts[3]
               };
+            });
 
-              done( null , x );
-            };
-          }), function(err, completedTree) {
+            // remove erroneous blank entry
+            tree = _.filter( tree , function(x) {
+              return x.name;
+            });
 
-            var command = 'cd ' + project.path + ' && git show ' + branch + ':README.md';
-            exec( command , function(err, readme , stderr) {
+            tree.sort(function(a, b) {
+              if (a.name < b.name) return -1;
+              if (a.name > b.name) return 1;
+              return 0;
+            });
 
-              console.log(command);
-              console.log(readme);
+            async.parallel(tree.map(function(x) {
+              return function(done) {
 
-              if (readme) {
-                project.readme = req.app.locals.marked(readme);
-              }
+                x.commit = {
+                  timestamp: new Date()
+                };
 
-              console.log(project.readme);
+                done( null , x );
+              };
+            }), function(err, completedTree) {
 
-              exec('cd '+project.path+' && git for-each-ref --format=\'%(refname:short)\' refs/heads/', function(err, stdout, stderr) {
-                var branches = stdout.split('\n');
-                repo.log(function(err, log) {
-                  res.provide( err , {
-                      project: project
-                    , repo: repo
-                    , branch: branch
-                    , branches: branches
-                    , commits: log
-                    , files: completedTree
-                  } , {
-                    template: 'project'
+              var command = 'cd ' + project.path + ' && git show ' + branch + ':README.md';
+              exec( command , function(err, readme , stderr) {
+
+                console.log(command);
+                console.log(readme);
+
+                if (readme) {
+                  project.readme = req.app.locals.marked(readme);
+                }
+
+                console.log(project.readme);
+
+                exec('cd '+project.path+' && git for-each-ref --format=\'%(refname:short)\' refs/heads/', function(err, stdout, stderr) {
+                  var branches = stdout.split('\n');
+                  repo.log(function(err, log) {
+                    res.provide( err , {
+                        project: project
+                      , repo: repo
+                      , branch: branch
+                      , branches: branches
+                      , commits: log
+                      , files: completedTree
+                      , issues: issues
+                      , docks: docks
+                    } , {
+                      template: 'project'
+                    });
                   });
                 });
-              });
 
+              });
             });
           });
         });
+
       });
     });
   },

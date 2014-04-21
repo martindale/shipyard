@@ -1,0 +1,9 @@
+form(action="/#{project._owner.slug}/#{project.slug}/docks", method="post")
+  .form-group
+    label(for="name") Name
+    input.form-control(type="text", name="name", placeholder="Name of dock")
+  .form-group
+    label(for="description") Description
+    textarea.form-control(type="text", name="description", placeholder="Technical details")
+
+  button.btn.btn-primary.pull-right(type="submit") Create &raquo;

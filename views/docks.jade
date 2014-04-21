@@ -1,0 +1,7 @@
+extends layout
+
+block content
+  a.btn.btn-default.pull-right(href="/#{project._owner.slug}/#{project.slug}/docks/new") Create Issue &raquo;
+  h1 Issues
+  each dock in docks
+    include partials/dock

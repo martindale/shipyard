@@ -1,5 +1,68 @@
 module.exports = {
-  index: function(req, res, next) {
-  
+  list: function(req, res, next) {
+    Project.lookup( req.param('uniqueSlug') , function(err, project) {
+      if (!project) { return next(); }
+
+      Issue.find({ _project: project._id }).exec(function(err, issues) {
+        res.provide( err, {
+            issues: issues
+          , project: project
+        }, {
+          template: 'issues'
+        });
+      });
+    });
+  },
+  view: function(req, res, next) {
+    Project.lookup( req.param('uniqueSlug') , function(err, project) {
+      if (!project) { return next(); }
+
+      Issue.findOne({ _project: project._id, id: req.param('issueID') }).populate('_creator').exec(function(err, issue) {
+        if (!issue) { return next(); }
+
+        console.log(issue);
+
+        res.provide( err, {
+            issue: issue
+          , project: project
+        }, {
+          template: 'issue'
+        });
+      });
+    });
+  },
+  createForm: function(req, res, next) {
+    Project.lookup( req.param('uniqueSlug') , function(err, project) {
+      if (!project) { return next(); }
+
+      res.render('issue-new', {
+        project: project
+      });
+
+    });
+  },
+  create: function(req, res, next) {
+    Project.lookup( req.param('uniqueSlug') , function(err, project) {
+      if (!project) { return next(); }
+
+      Issue.find({ _project: project._id }, { id: 1 }).exec(function(err, issues) {
+        if (!issues || !issues.length) {
+          var issues = [{ id: 0 }];
+        }
+
+        var id = _.max(issues.map(function(x) { return x.id; }));
+        var issue = new Issue({
+            id: ++id
+          , _project: project._id
+          , name: req.param('name')
+          , description: req.param('description')
+          , _creator: req.user._id
+        });
+        issue.save(function(err) {
+          if (err) { console.log(err); }
+          res.redirect( '/' + project._owner.slug + '/' + project.slug + '/issues/' + issue.id );
+        });
+      });
+    });
   }
 }

@@ -30,3 +30,8 @@ maki.controller('Project', ['$scope', function($scope) {
 $('.tooltipped').tooltip({
   container: 'body'
 });
+
+/* $('.nav-tabs a').click(function (e) {
+  e.preventDefault()
+  $(this).tab('show')
+}) */

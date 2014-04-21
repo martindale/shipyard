@@ -1,0 +1,8 @@
+tr
+  td
+    a(href="/#{project._owner.slug}/#{project.slug}/docks/#{dock.id}") ##{dock.id}
+  td
+    a(href="/#{project._owner.slug}/#{project.slug}/docks/#{dock.id}") #{dock.name}
+  td
+    - var person = dock._creator
+    include person

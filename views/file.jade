@@ -1,8 +1,24 @@
 extends layout
 
 block content
-  h1 #{file.name}
-    |  
+
+  h1
+    include partials/project-name
+    |  / #{file.name} 
     small #{file.type}
 
-  pre #{file.contents}
+  ul.nav.nav-tabs
+    li.active
+      a(href="#raw", data-toggle="tab") raw
+    li
+      a(href="#rendered", data-toggle="tab") rendered
+    li
+      a(href="#commits", data-toggle="tab") history
+
+  .tab-content
+    .tab-pane.active#raw
+      pre #{file.raw}
+    .tab-pane#rendered
+      .rendered-content !{file.contents}
+    .tab-pane#commits
+      h2 Commits

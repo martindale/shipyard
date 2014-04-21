@@ -2,8 +2,7 @@ extends layout
 
 block content
   h1
-    a(href="/#{project._owner.slug}") #{project._owner.slug}
-    | /#{project.name}
+    include partials/project-name
 
   pre http://localhost:9200/#{project._owner.slug}/#{project.slug}
 
@@ -17,44 +16,54 @@ block content
         li(class=((branch == availableBranch) ? 'active' : undefined))
           a(href="/#{project._owner.slug}/#{project.slug}/tree/#{availableBranch}") #{availableBranch}
 
-  .row
-    .col-md-12
-      .tabbable.tabs-right
-        .nav.nav-tabs
-          li.active
-            a(href="#code", data-toggle="tab")
-              i.fa.fa-code
-              |  Code
-          li
-            a(href="#issues", data-toggle="tab")
-              i.fa.fa-warning
-              |  Issues
-          li
-            a(href="#docks", data-toggle="tab")
-              i.fa.fa-users
-              |  Docks
+  hr
 
-        .tab-content
-          .tab-pane.active#code
-            h2 Commits
-            each commit in commits
-              pre #{JSON.stringify(commit)}
+  ul.nav.nav-tabs#project-tabs
+    li.active
+      a(href="#code", data-toggle="tab")
+        i.fa.fa-code
+        |  Code
+    li
+      a(href="#issues", data-toggle="tab")
+        i.fa.fa-warning
+        |  Issues
+    li
+      a(href="#docks", data-toggle="tab")
+        i.fa.fa-users
+        |  Docks
 
-            h2 Code
-            table.table
-              each file in files
-                tr
-                  td
-                    a(href="/#{project._owner.slug}/#{project.slug}/blob/#{branch}/#{file.name}") #{file.name}
-                  td
-                    a(href="") #{file.commit.msg}
-                  td
-                    a(href="") #{moment(file.commit.timestamp).fromNow()}
+  .tab-content
+    .tab-pane.active#code
+      h2 Commits
+      each commit in commits
+        pre #{JSON.stringify(commit)}
 
-            h2 README.md
-            .readme !{project.readme}
+      h2 Code
+      table.table
+        each file in files
+          tr
+            td
+              a(href="/#{project._owner.slug}/#{project.slug}/blob/#{branch}/#{file.name}") #{file.name}
+            td
+              a(href="") #{file.commit.msg}
+            td
+              a(href="") #{moment(file.commit.timestamp).fromNow()}
 
-          .tab-pane#issues
-            h2 Issues
-          .tab-pane#docks
-            h2 Docks
+      h2 README.md
+      .readme !{project.readme}
+
+    .tab-pane#issues
+      a.btn.btn-default.pull-right(href="/#{project._owner.slug}/#{project.slug}/issues/new") Create Issue &raquo;
+      h2 Issues
+      table.table
+        each issue in issues
+          include partials/issue
+
+    .tab-pane#docks
+      h2 Docks
+      table.table
+        each dock in docks
+          tr
+            td #{dock.id}
+            td #{dock.title}
+
