@@ -9,6 +9,13 @@ var express = require('express')
   , redis = require('redis');
 
 var moment = require('moment');
+var marked = require('marked');
+marked.setOptions({
+    smartypants: true
+  , highlight: function(code) {
+      return require('highlight.js').highlightAuto(code).value;
+    }
+});
 
 var sessionStore = new RedisStore();
 
@@ -38,9 +45,9 @@ var projects      = require('./controllers/projects');
 var organizations = require('./controllers/organizations');
 var issues        = require('./controllers/issues');
 
-// make the HTML output readible, for designers. :)
 app.locals.pretty = true;
 app.locals.moment = moment;
+app.locals.marked = marked;
 
 app.use(require('less-middleware')({ 
     debug: true
@@ -104,7 +111,7 @@ app.use(function(req, res, next) {
 });
 
 function requireLogin(req, res, next) {
-  if (req.user) { return next(); }
+  if (req.user) { req.user.save(); return next(); }
   // require the user to log in
   res.status(401).render('login', {
     next: req.path
@@ -163,9 +170,9 @@ app.get('/projects',                          projects.list );
 app.get('/projects/new', requireLogin ,       projects.createForm );
 app.post('/projects',    requireLogin ,       projects.create );
 
-app.get('/:actorSlug/:projectSlug',                         projects.view );
-app.get('/:actorSlug/:projectSlug/tree/:branchName',        projects.view );
-app.get('/:actorSlug/:projectSlug/issues',                  projects.listIssues );
+app.get('/:actorSlug/:projectSlug',                  setupRepo, projects.view );
+app.get('/:actorSlug/:projectSlug/tree/:branchName', setupRepo, projects.view );
+app.get('/:actorSlug/:projectSlug/issues',           setupRepo, projects.listIssues );
 
 function setupRepo(req, res, next) {
   req.params.uniqueSlug = req.param('actorSlug') + '/' + req.param('projectSlug');

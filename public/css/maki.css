@@ -95,6 +95,10 @@ body {
   max-width: 5em;
 }
 /* size limiters */
+.size-2 {
+  max-height: 2em;
+  max-width: 2em;
+}
 .size-5 {
   max-height: 5em;
   max-width: 5em;
@@ -106,4 +110,7 @@ body {
 /* utility classes */
 .pad-right {
   margin-right: 1em;
+}
+a:hover {
+  text-decoration: none;
 }

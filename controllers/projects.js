@@ -1,5 +1,6 @@
 var fs = require('fs');
 var exec = require('child_process').exec;
+var mime = require('mime');
 
 module.exports = {
   index: function(req, res, next) {
@@ -27,12 +28,23 @@ module.exports = {
       if (!project) { return next(); }
 
       var command = 'cd ' + project.path + ' && git show ' + req.param('branchName') + ':' + req.param('filePath');
-      console.log(command);
       exec( command , function(err, stdout, stderr) {
+
+        var contents = stdout;
+        var type = mime.lookup( req.param('filePath') );
+
+        // TODO: build a better handler
+        switch (type) {
+          case 'text/x-markdown':
+            contents = req.app.locals.marked(contents);
+          break;
+        }
+
         res.provide( err , {
           file: {
               name: req.param('filePath')
-            , contents: stdout
+            , type: type
+            , contents: contents
           }
         } , {
           template: 'file'
@@ -41,67 +53,72 @@ module.exports = {
     });
   },
   view: function(req, res, next) {
-    Actor.findOne({ slug: req.param('actorSlug') }).exec(function(err, actor) {
-      if (!actor) { return next(); }
+    Project.lookup( req.param('uniqueSlug') , function(err, project) {
+      if (!project) { return next(); }
 
-      Project.findOne({
-          _owner: actor._id
-        , slug: req.param('projectSlug')
-      }).populate('_owner').lean().exec(function(err, project) {
-        if (!project) { return next(); }
+      var context = Account;
 
-        var context = Account;
+      switch (project._owner.type) {
+        case 'Account':      var context = Account;      break;
+        case 'Organization': var context = Organization; break;
+      }
 
-        switch (project._owner.type) {
-          case 'Account':      var context = Account;      break;
-          case 'Organization': var context = Organization; break;
-        }
+      context.findOne({ _id: project._owner.target }, function(err, owner) {
+        if (err) { console.log(err); }
 
-        context.findOne({ _id: project._owner.target }, function(err, owner) {
+        project._owner = owner;
+        project.path = config.git.data.path + '/' + project._id; // remove with lean()
+
+        var repo = git( config.git.data.path + '/' + project._id );
+
+        var branch = req.param('branchName') || 'master';
+
+        exec('cd '+project.path+ ' && git ls-tree ' + branch, function(err, stdout, stderr) {
           if (err) { console.log(err); }
 
-          project._owner = owner;
-          project.path = config.git.data.path + '/' + project._id; // remove with lean()
+          var tree = stdout.split('\n').map(function(x) {
+            var parts = x.split(/\s/);
+            return {
+                attributes: parts[0]
+              , type:       parts[1]
+              , id:         parts[2]
+              , name:       parts[3]
+            };
+          });
 
-          var repo = git( config.git.data.path + '/' + project._id );
+          // remove erroneous blank entry
+          tree = _.filter( tree , function(x) {
+            return x.name;
+          });
 
-          var branch = req.param('branchName') || 'master';
+          tree.sort(function(a, b) {
+            if (a.name < b.name) return -1;
+            if (a.name > b.name) return 1;
+            return 0;
+          });
 
-          exec('cd '+project.path+ ' && git ls-tree ' + branch, function(err, stdout, stderr) {
-            if (err) { console.log(err); }
+          async.parallel(tree.map(function(x) {
+            return function(done) {
 
-            var tree = stdout.split('\n').map(function(x) {
-              var parts = x.split(/\s/);
-              return {
-                  attributes: parts[0]
-                , type:       parts[1]
-                , id:         parts[2]
-                , name:       parts[3]
+              x.commit = {
+                timestamp: new Date()
               };
-            });
 
-            // remove erroneous blank entry
-            tree = _.filter( tree , function(x) {
-              return x.name;
-            });
+              done( null , x );
+            };
+          }), function(err, completedTree) {
 
-            tree.sort(function(a, b) {
-              if (a.name < b.name) return -1;
-              if (a.name > b.name) return 1;
-              return 0;
-            });
+            var command = 'cd ' + project.path + ' && git show ' + branch + ':README.md';
+            exec( command , function(err, readme , stderr) {
 
-            async.parallel(tree.map(function(x) {
-              return function(done) {
+              console.log(command);
+              console.log(readme);
 
-                x.commit = {
-                  timestamp: new Date()
-                };
+              if (readme) {
+                project.readme = req.app.locals.marked(readme);
+              }
 
-                done( null , x );
-              };
-            }), function(err, completedTree) {
-              console.log(completedTree)
+              console.log(project.readme);
 
               exec('cd '+project.path+' && git for-each-ref --format=\'%(refname:short)\' refs/heads/', function(err, stdout, stderr) {
                 var branches = stdout.split('\n');
@@ -118,6 +135,7 @@ module.exports = {
                   });
                 });
               });
+
             });
           });
         });

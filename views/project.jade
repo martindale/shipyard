@@ -51,6 +51,9 @@ block content
                   td
                     a(href="") #{moment(file.commit.timestamp).fromNow()}
 
+            h2 README.md
+            .readme !{project.readme}
+
           .tab-pane#issues
             h2 Issues
           .tab-pane#docks

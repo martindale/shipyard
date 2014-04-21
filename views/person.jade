@@ -1,6 +1,13 @@
 extends layout
 
 block content
-  h1 #{resource.username} 
-    small a user on Maki
-  p #{resource.email}
+  h1
+    include partials/person
+    |  
+    small a craftsman of code
+
+  h2 Projects
+  ul.nav.nav-list
+    each project in projects
+      li
+        include partials/project
