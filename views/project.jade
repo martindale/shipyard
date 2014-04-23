@@ -1,8 +1,17 @@
 extends layout
 
 block content
+
+  a.btn.btn-default.pull-right(href="#modal-fork", data-toggle="modal")
+    i.fa.fa-code-fork
+    |  fork &raquo;
+
   h1
     include partials/project-name
+  if (project._upstream)
+    h2
+      small forked from 
+        a(href="#") #{project._upstream}
 
   pre http://localhost:9200/#{project._owner.slug}/#{project.slug}
 
@@ -18,7 +27,7 @@ block content
 
   hr
 
-  ul.nav.nav-tabs#project-tabs
+  ul.nav.nav-tabs.tabs-right#project-tabs
     li.active
       a(href="#code", data-toggle="tab")
         i.fa.fa-code
@@ -66,4 +75,23 @@ block content
           tr
             td #{dock.id}
             td #{dock.title}
+
+  form.modal.fade#modal-fork(action="/projects", method="post")
+    input(type="hidden", name="fromProjectID", value="#{project._id}")
+
+    .modal-dialog
+      .modal-content
+        .modal-header
+          button.close(type="button", data-dismiss="modal") &times;
+          h4.modal-title Fork #{project.name} to...
+        .modal-body
+          .form-group
+            label(for="name") Name
+            input.form-control(type="text", name="name", placeholder="Name of Project", value="#{project.name}")
+          .form-group
+            label(for="description") Description
+            textarea.form-control(type="text", name="description", placeholder="Technical details") #{project.description}
+        .modal-footer
+          button.btn.btn-default(type="button", data-dismiss="modal") Close
+          button.btn.btn-primary(type="submit") Continue &raquo;
 

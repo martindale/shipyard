@@ -114,7 +114,7 @@ app.use(function(req, res, next) {
 });
 
 function requireLogin(req, res, next) {
-  if (req.user) { req.user.save(); return next(); }
+  if (req.user) { return next(); }
   // require the user to log in
   res.status(401).render('login', {
     next: req.path

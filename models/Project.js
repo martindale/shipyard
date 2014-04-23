@@ -11,6 +11,7 @@ var ProjectSchema = new Schema({
   , created: { type: Date, required: true, default: Date.now }
   , _creator: { type: ObjectId, ref: 'Actor', required: true }
   , _owner:   { type: ObjectId, ref: 'Actor', required: true }
+  , _upstream: { type: ObjectId, ref: 'Project' }
 });
 
 // attach a URI-friendly slug

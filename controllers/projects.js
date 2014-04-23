@@ -23,6 +23,16 @@ module.exports = {
       });
     }
   },
+  viewCommit: function(req, res, next) {
+    Project.lookup( req.param('uniqueSlug') , function(err, project) {
+      if (!project) { return next(); }
+
+      var diff = require('../lib/pretty-diff');
+
+
+
+    });
+  },
   viewBlob: function(req, res, next) {
     Project.lookup( req.param('uniqueSlug') , function(err, project) {
       if (!project) { return next(); }
@@ -41,16 +51,32 @@ module.exports = {
           break;
         }
 
-        res.provide( err , {
-          project: project,
-          file: {
-              name: req.param('filePath')
-            , type: type
-            , contents: contents
-            , raw: raw
-          }
-        } , {
-          template: 'file'
+        exec('cd  ' + project.path + ' && git log --pretty=oneline  '+ req.param('filePath'), function(err, stdout, stderr) {
+          if (err) { console.log(err); }
+
+          console.log(stdout);
+
+          var commits = stdout.split('\n');
+          commits = commits.map(function(x) {
+            var parts = x.split(/\s/);
+            return {
+                id: parts[0]
+              , message: parts[1]
+            }
+          });
+
+          res.provide( err , {
+            project: project,
+            file: {
+                name: req.param('filePath')
+              , type: type
+              , contents: contents
+              , raw: raw
+              , commits: commits
+            }
+          } , {
+            template: 'file'
+          });
         });
       });
     });
@@ -178,61 +204,40 @@ module.exports = {
     project._owner      = req.user._actor;
 
     var path = config.git.data.path + '/' + project._id ;
+    var command = '';
 
-    // TODO: use job scheduler
-    Git.Repo.init( path , false , function(err, repo) {
-      if (err) { console.log(err); }
+    if (req.param('fromProjectID')) {
+      Project.findOne({ _id: req.param('fromProjectID') }).exec(function(err, upstream) {
+        command = 'cp -r ' + config.git.data.path + '/' + upstream._id + ' ' + path;
 
-      project.save(function(err) {
-        if (err) { console.log(err); }
+        project._upstream = upstream._id;
 
-        Actor.populate( project , {
-          path: '_owner'
-        } , function(err, project) {
-          if (err) { console.log(err); }
-
-          res.redirect('/' + project._owner.slug + '/' + project.slug )
-        });
+        createProject();
       });
+    } else {
+      command = 'mkdir ' + path + ' && cd ' + path + ' && git init && echo "# '+project._id+'" > README.md && git add README.md && git commit -m "Initial commit."';
+      createProject();
+    }
 
-
-      /*
-      var file = path + '/README.md';
-      var buffer = new Buffer('# ' + project.name + '\n')
-      fs.writeFileSync( file , buffer )
-
-      repo.createBlobFromFile( file , function(err, blob) {
+    function createProject() {
+      // TODO: use job scheduler
+      exec( command , function(err, stdout, stderr) {
         if (err) { console.log(err); }
+        console.log(stdout);
 
-        var builder = Git.TreeBuilder.create();
-        builder.repo = repo;
-
-
-        builder.insert( file , blob.Oid , false );
-
-        builder.write(function(err, treeID) {
+        project.save(function(err) {
           if (err) { console.log(err); }
 
-          var signature = Git.Signature.create('Eric Martindale', 'eric@ericmartindale.com', 0, 0 );
-
-          repo.createCommit( null , signature , signature , 'test 1', 'master', null, function(err, commit) {
+          Actor.populate( project , {
+            path: '_owner'
+          } , function(err, project) {
             if (err) { console.log(err); }
-            
-            project.save(function(err) {
-              if (err) { console.log(err); }
 
-
-              Actor.populate( project , {
-                path: '_owner'
-              } , function(err, project) {
-                if (err) { console.log(err); }
-
-                res.redirect('/' + project._owner.slug + '/' + project.slug )
-              });
-            });
+            res.redirect('/' + project._owner.slug + '/' + project.slug )
           });
         });
-      });*/
-    });
+      });
+    }
+
   }
 }

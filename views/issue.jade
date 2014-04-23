@@ -2,5 +2,11 @@ extends layout
 
 block content
   h1 Issue
-    |  #{issue.name}
+    |  #{issue.name} 
+    .label.label-default #{issue.status}
+    |  
+    small
+      |  &bull; created by 
+      - var person = issue._creator
+      include partials/person
   p #{issue.description}

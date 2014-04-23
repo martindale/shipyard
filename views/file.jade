@@ -22,3 +22,7 @@ block content
       .rendered-content !{file.contents}
     .tab-pane#commits
       h2 Commits
+      ul.nav.nav-list
+        each commit in file.commits
+          li
+            a(href="/#{project._owner.slug}/#{project.slug}/commit/#{commit.id}") #{commit.message}
