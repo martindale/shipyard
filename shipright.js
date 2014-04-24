@@ -1,3 +1,5 @@
+require('debug-trace')({ always: true });
+
 var fs = require('fs')
   , express = require('express')
   , app = express()
@@ -180,7 +182,9 @@ app.get('/:actorSlug/:projectSlug/issues/new',       setupRepo, issues.createFor
 app.post('/:actorSlug/:projectSlug/issues',          setupRepo, issues.create );
 
 function setupRepo(req, res, next) {
+  req.params.projectSlug = req.params.projectSlug.replace('.git', '');
   req.params.uniqueSlug = req.param('actorSlug') + '/' + req.param('projectSlug');
+
   next();
 }
 //app.get('/:actorSlug/:projectSlug.git/info/refs',               setupRepo , projects.git.refs );
@@ -188,12 +192,20 @@ app.get('/:actorSlug/:projectSlug/blob/:branchName/:filePath',  setupRepo , proj
 
 function setupPushover(req, res, next) {
   Project.lookup( req.param('uniqueSlug') , function(err, project) {
-    req.params.projectID = project._id;
+    if (err) { console.log(err); }
+    if (!project) { return next(); }
+
+    req.projectID = project._id.toString();
+
     next();
   });
 }
-var pushover = require('pushover');
-var repos = pushover( config.git.data.path );
+var pushover = require('./lib/pushover');
+
+var repos = pushover( config.git.data.path , {
+  checkout: true
+});
+
 repos.on('push', function (push) {
   console.log('push ' + push.repo + '/' + push.commit
       + ' (' + push.branch + ')'
@@ -205,9 +217,13 @@ repos.on('fetch', function (fetch) {
   fetch.accept();
 });
 
-app.get('/:actorSlug/:projectSlug.git/info/refs', setupRepo , setupPushover , function(req, res) {
-  console.log('handling....')
-  repos.handle(req, res)
+app.get('/:actorSlug/:projectSlug.git*', setupRepo , setupPushover , function(req, res) {
+  console.log('handling get....')
+  repos.handle(req, res);
+});
+app.post('/:actorSlug/:projectSlug.git*', setupRepo , setupPushover , function(req, res) {
+  console.log('handling post....')
+  repos.handle(req, res);
 });
 
 app.get('/:organizationSlug', organizations.view );
