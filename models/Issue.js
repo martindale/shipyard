@@ -11,11 +11,13 @@ var IssueSchema = new Schema({
   , name: { type: String, required: true }
   , description: { type: String }
   , status: { type: String, enum: ['open', 'closed'], default: 'open' }
+  , type: { type: String, enum: ['issue', 'dock'], default: 'issue' }
   , created: { type: Date, required: true, default: Date.now }
   , closed: { type: Date, default: Date.now }
   , _project: { type: ObjectId, ref: 'Project', required: true }
   , _creator: { type: ObjectId, ref: 'Account', required: true }
   , _assignees: [ { type: ObjectId, ref: 'Account' } ]
+  , _comments:  [ { type: ObjectId, ref: 'Comment' } ]
 });
 
 IssueSchema.index({ _project: 1, id: 1 }, { unique: true });

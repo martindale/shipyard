@@ -24,5 +24,4 @@ block content
       h2 Commits
       ul.nav.nav-list
         each commit in file.commits
-          li
-            a(href="/#{project._owner.slug}/#{project.slug}/commit/#{commit.id}") #{commit.message}
+          include partials/commit-row

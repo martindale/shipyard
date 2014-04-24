@@ -1,12 +1,32 @@
 extends layout
 
+block prepend projectHeader
+  a.btn.btn-default.pull-right(href="#", data-action="edit-issue")
+    i.fa.fa-edit
+    |  edit
+
+block append projectTitle
+  |  
+  a(href="") ##{issue.id}
+  .label.label-default #{issue.status}
+
+  small
+    |  &bull; created by 
+    - var person = issue._creator
+    include partials/person
+
 block content
-  h1 Issue
-    |  #{issue.name} 
-    .label.label-default #{issue.status}
-    |  
-    small
-      |  &bull; created by 
-      - var person = issue._creator
-      include partials/person
+
+  include partials/project-header
+
+  hr
+
   p #{issue.description}
+
+  hr
+  h3 Comments
+  .comments
+    each comment in issue._comments
+      include partials/comment
+  mixin commentForm( '/' + project._owner.slug + '/' + project.slug + '/issues/' + issue.id + '/comments' )
+

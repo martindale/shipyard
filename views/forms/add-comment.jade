@@ -1,0 +1,9 @@
+form(action="#{action}", method="post", role="form")
+  .form-group.row
+    .col-md-1
+      if (user)
+        img.tooltipped.pull-left(src="#{user.image.url}", data-placement="right", style="max-width: 100%;", title="You'll be making this comment as @#{user.username}.")
+    .col-md-11
+      textarea.form-control(name="message", data-require="auth", placeholder="What do you think?")
+
+  button.btn.btn-primary.pull-right(type="submit", data-require="auth") Add Comment &raquo;

@@ -172,12 +172,14 @@ app.get('/projects',                          projects.list );
 app.get('/projects/new', requireLogin ,       projects.createForm );
 app.post('/projects',    requireLogin ,       projects.create );
 
-app.get('/:actorSlug/:projectSlug',                  setupRepo, projects.view );
-app.get('/:actorSlug/:projectSlug/tree/:branchName', setupRepo, projects.view );
-app.get('/:actorSlug/:projectSlug/issues',           setupRepo, issues.list );
-app.get('/:actorSlug/:projectSlug/issues/:issueID',  setupRepo, issues.view );
-app.get('/:actorSlug/:projectSlug/issues/new',       setupRepo, issues.createForm );
-app.post('/:actorSlug/:projectSlug/issues',          setupRepo, issues.create );
+app.get('/:actorSlug/:projectSlug',                                 setupRepo, projects.view );
+app.get('/:actorSlug/:projectSlug/tree/:branchName',                setupRepo, projects.view );
+app.get('/:actorSlug/:projectSlug/issues',                          setupRepo, issues.list );
+app.get('/:actorSlug/:projectSlug/issues/:issueID',                 setupRepo, issues.view );
+app.get('/:actorSlug/:projectSlug/issues/new',                      setupRepo, issues.createForm );
+app.post('/:actorSlug/:projectSlug/issues',          requireLogin , setupRepo, issues.create );
+
+app.post('/:actorSlug/:projectSlug/issues/:issueID/comments', requireLogin , setupRepo, issues.addComment );
 
 function setupRepo(req, res, next) {
   req.params.projectSlug = req.params.projectSlug.replace('.git', '');
@@ -187,6 +189,7 @@ function setupRepo(req, res, next) {
 }
 //app.get('/:actorSlug/:projectSlug.git/info/refs',               setupRepo , projects.git.refs );
 app.get('/:actorSlug/:projectSlug/blob/:branchName/:filePath',  setupRepo , projects.viewBlob );
+app.get('/:actorSlug/:projectSlug/commit/:commitID',            setupRepo , projects.viewCommit );
 
 function setupPushover(req, res, next) {
   Project.lookup( req.param('uniqueSlug') , function(err, project) {

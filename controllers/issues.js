@@ -17,16 +17,39 @@ module.exports = {
     Project.lookup( req.param('uniqueSlug') , function(err, project) {
       if (!project) { return next(); }
 
-      Issue.findOne({ _project: project._id, id: req.param('issueID') }).populate('_creator').exec(function(err, issue) {
+      Issue.findOne({ _project: project._id, id: req.param('issueID') }).populate('_creator _comments').exec(function(err, issue) {
         if (!issue) { return next(); }
 
-        console.log(issue);
+        Account.populate( issue , {
+          path: '_comments._author'
+        }, function(err, issue) {
+          res.provide( err, {
+              issue: issue
+            , project: project
+          }, {
+            template: 'issue'
+          });
+        });
 
-        res.provide( err, {
-            issue: issue
-          , project: project
-        }, {
-          template: 'issue'
+      });
+    });
+  },
+  addComment: function(req, res, next) {
+    Project.lookup( req.param('uniqueSlug') , function(err, project) {
+      if (!project) { return next(); }
+
+      Issue.findOne({ _project: project._id, id: req.param('issueID') }).exec(function(err, issue) {
+        if (!issue) { return next(); }
+
+        var comment = new Comment({
+            message: req.param('message')
+          , _author: req.user._id
+        });
+        comment.save(function(err) {
+          issue._comments.push( comment._id );
+          issue.save(function(err) {
+            res.redirect( '/' + project._owner.slug + '/' + project.slug + '/issues/' + issue.id + '#' + comment._id );
+          });
         });
       });
     });

@@ -1,0 +1,10 @@
+.comment.row
+  .comment-author.col-md-3
+    abbr.pull-right.timeago(title="#{comment.published}") #{moment(comment.published).fromNow()}
+    a(href="/#{comment._author.slug}")
+      img.size-2.pad-right(src="#{comment._author.image.url}", style="max-width: 100%;")
+      | #{comment._author.username}
+
+  .clearfix
+
+  .comment-content !{marked(comment.message)}

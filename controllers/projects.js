@@ -2,6 +2,18 @@ var fs = require('fs');
 var exec = require('child_process').exec;
 var mime = require('mime');
 
+
+function cleanGitLog(x) {
+  var parts = x.split(/\s/);
+
+  console.log(parts);
+
+  return {
+      id: parts.shift()
+    , message: parts.join(' ')
+  }
+}
+
 module.exports = {
   index: function(req, res, next) {
 
@@ -27,10 +39,21 @@ module.exports = {
     Project.lookup( req.param('uniqueSlug') , function(err, project) {
       if (!project) { return next(); }
 
-      var diff = require('../lib/pretty-diff');
+      //var diff = require('../lib/pretty-diff');
 
+      exec( 'cd ' + project.path + ' && git diff '+req.param('commitID')+'^ '+req.param('commitID') , function(err, stdout, stderr) {
+        if (err) { console.log(err); }
+        if (stderr) { return next(); }
 
-
+        res.provide(err , {
+          commit: {
+              id: req.param('commitID')
+            , diff: stdout
+          }
+        }, {
+          template: 'commit'
+        });
+      } );
     });
   },
   viewBlob: function(req, res, next) {
@@ -49,6 +72,9 @@ module.exports = {
           case 'text/x-markdown':
             contents = req.app.locals.marked(contents);
           break;
+          case 'application/javascript':
+            contents = req.app.locals.marked('```js\n' + contents + '```');
+          break;
         }
 
         exec('cd  ' + project.path + ' && git log --pretty=oneline  '+ req.param('filePath'), function(err, stdout, stderr) {
@@ -57,13 +83,7 @@ module.exports = {
           console.log(stdout);
 
           var commits = stdout.split('\n');
-          commits = commits.map(function(x) {
-            var parts = x.split(/\s/);
-            return {
-                id: parts[0]
-              , message: parts[1]
-            }
-          });
+          commits = commits.map( cleanGitLog );
 
           res.provide( err , {
             project: project,
@@ -87,10 +107,10 @@ module.exports = {
 
       async.parallel([
         function(done) {
-          Issue.find({ _project: project._id }).populate('_creator').exec( done );
+          Issue.find({ _project: project._id, type: 'issue' }).populate('_creator').exec( done );
         },
         function(done) {
-          Issue.find({ _project: project._id }).populate('_creator').exec( done );
+          Issue.find({ _project: project._id, type: 'dock' }).populate('_creator').exec( done );
         }
       ], function(err, results) {
 
@@ -153,24 +173,22 @@ module.exports = {
               var command = 'cd ' + project.path + ' && git show ' + branch + ':README.md';
               exec( command , function(err, readme , stderr) {
 
-                console.log(command);
-                console.log(readme);
-
                 if (readme) {
                   project.readme = req.app.locals.marked(readme);
                 }
 
-                console.log(project.readme);
-
                 exec('cd '+project.path+' && git for-each-ref --format=\'%(refname:short)\' refs/heads/', function(err, stdout, stderr) {
                   var branches = stdout.split('\n');
-                  repo.log(function(err, log) {
+                  exec('cd '+project.path+' && git log --pretty=oneline', function(err, commits) {
+
+                    commits = commits.split('\n').map( cleanGitLog );
+
                     res.provide( err , {
                         project: project
                       , repo: repo
                       , branch: branch
                       , branches: branches
-                      , commits: log
+                      , commits: commits
                       , files: completedTree
                       , issues: issues
                       , docks: docks
