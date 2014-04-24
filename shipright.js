@@ -259,6 +259,8 @@ app.post('/:actorSlug/:projectSlug.git*', setupRepo , setupPushover , function(r
   repos.handle(req, res);
 });
 
+app.get('/people', people.list);
+
 app.get('/:organizationSlug', organizations.view );
 app.get('/:usernameSlug',     people.view );
 
