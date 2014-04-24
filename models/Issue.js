@@ -18,6 +18,11 @@ var IssueSchema = new Schema({
   , _creator: { type: ObjectId, ref: 'Account', required: true }
   , _assignees: [ { type: ObjectId, ref: 'Account' } ]
   , _comments:  [ { type: ObjectId, ref: 'Comment' } ]
+  , _references: [ new Schema({
+        _issue: { type: ObjectId, ref: 'Issue', required: true }
+      , _creator: { type: ObjectId, ref: 'Account', required: true }
+      , timestamp:{ type: Date, required: true, default: Date.now }
+    }) ]
 });
 
 IssueSchema.index({ _project: 1, id: 1 }, { unique: true });

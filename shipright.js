@@ -50,7 +50,14 @@ var issues        = require('./controllers/issues');
 
 app.locals.pretty = true;
 app.locals.moment = moment;
-app.locals.marked = marked;
+app.locals.marked = function( inputString , context ) {
+  var parsed = marked( inputString );
+
+  if (context && context.project) {
+    parsed = parsed.replace(/\#(\d+)/g, '<a href="/'+context.project._owner.slug+'/'+context.project.slug+'/issues/$1">#$1</a>');
+  }
+  return parsed;
+};
 
 app.use(require('less-middleware')({ 
     debug: true
