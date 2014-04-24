@@ -24,9 +24,19 @@ block content
   p !{marked( issue.description , resource )}
 
   hr
+
+  h3 References
+  .references
+    each reference in issue._references
+      .reference
+        abbr.pull-right #{moment(reference.timestamp).fromNow()}
+        a(href="/#{reference._creator.slug}") #{reference._creator.username}
+        |  referenced this from 
+        a(href="#{reference._issue.id}") ##{reference._issue.id}
+
+  hr
   h3 Comments
   .comments
     each comment in issue._comments
       include partials/comment
   mixin commentForm( '/' + project._owner.slug + '/' + project.slug + '/issues/' + issue.id + '/comments' )
-

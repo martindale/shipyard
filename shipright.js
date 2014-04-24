@@ -53,8 +53,33 @@ app.locals.moment = moment;
 app.locals.marked = function( inputString , context ) {
   var parsed = marked( inputString );
 
-  if (context && context.project) {
+  if (context && context.project && context.issue) {
     parsed = parsed.replace(/\#(\d+)/g, '<a href="/'+context.project._owner.slug+'/'+context.project.slug+'/issues/$1">#$1</a>');
+  
+    // TODO: use a job scheduler
+    var references = parsed.match(/\#(\d+)/g);
+    if (references) {
+      references.forEach(function(id) {
+        var query = { _project: context.project._id , id: id.slice(1) };
+        console.log(query);
+        Issue.findOne( query ).exec(function(err, issue) {
+          if (err || !issue) { return; }
+
+          var list = issue._references.map(function(x) { return x._id; });
+          console.log(list);
+          if (issue._references.map(function(x) { return x._issue.toString(); }).indexOf( context.issue._id.toString() ) < 0) {
+            issue._references.push({
+                _issue: context.issue._id
+              , _creator: context.issue._creator._id
+            });
+            issue.save(function(err) {
+              if (err) { console.log(err); }
+              // TODO: broadcast event on a redis channel
+            });
+          }
+        });
+      });
+    }
   }
   return parsed;
 };

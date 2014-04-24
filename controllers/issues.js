@@ -17,7 +17,7 @@ module.exports = {
     Project.lookup( req.param('uniqueSlug') , function(err, project) {
       if (!project) { return next(); }
 
-      Issue.findOne({ _project: project._id, id: req.param('issueID') }).populate('_creator _comments').exec(function(err, issue) {
+      Issue.findOne({ _project: project._id, id: req.param('issueID') }).populate('_creator _comments _references._issue _references._creator').exec(function(err, issue) {
         if (!issue) { return next(); }
 
         Account.populate( issue , {
