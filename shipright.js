@@ -178,9 +178,11 @@ app.post('/register', function(req, res) {
       return res.render('register', { user : user });
     }
 
+    return res.redirect( next );
+
     req.login( user , function(err) {
       var next = req.param('next') ? req.param('next') : '/';
-      res.redirect( next );
+      
     });
   });
 });

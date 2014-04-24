@@ -6,19 +6,23 @@ block prepend projectHeader
     |  edit
 
 block append projectTitle
-  |  
-  a(href="") ##{issue.id}
-  .label.label-default #{issue.status}
+  |  / 
+  a(href="/#{project.slug}/#{project._owner.slug}/issues") issues
+  |  / 
+  a(href="/#{project.slug}/#{project._owner.slug}/issues/#{issue.id}") ##{issue.id}
 
-  small
-    |  &bull; created by 
-    - var person = issue._creator
-    include partials/person
 
 block content
 
   include partials/project-header
 
+  h2 #{issue.name} 
+    small
+      .label.label-default #{issue.status}
+      |  created by 
+      - var person = issue._creator
+      include partials/person
+    
   hr
 
   p !{marked( issue.description , resource )}
