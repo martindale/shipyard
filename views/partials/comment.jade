@@ -7,4 +7,5 @@
 
   .clearfix
 
-  .comment-content !{marked(comment.message)}
+  - var myContext = _.extend( resource , { comment: comment } )
+  .comment-content !{marked( comment.message , myContext )}

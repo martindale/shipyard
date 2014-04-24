@@ -2,7 +2,10 @@ tr
   td
     a(href="/#{project._owner.slug}/#{project.slug}/issues/#{issue.id}") ##{issue.id}
   td
-    a(href="/#{project._owner.slug}/#{project.slug}/issues/#{issue.id}") #{issue.name}
+    h5
+      a(href="/#{project._owner.slug}/#{project.slug}/issues/#{issue.id}") #{issue.name}
+      |  
+      small #{issue._comments.length} comments
   td
     - var person = issue._creator
     include person

@@ -1,7 +1,16 @@
 extends layout
 
-block content
+block prepend projectHeader
   a.btn.btn-default.pull-right(href="/#{project._owner.slug}/#{project.slug}/issues/new") Create Issue &raquo;
+
+block append projectTitle
+  |  / 
+  a(href="/#{project._owner.slug}/#{project.slug}/issues") issues
+
+block content
+
+  include partials/project-header
+
   h1 Issues
   each issue in issues
     include partials/issue

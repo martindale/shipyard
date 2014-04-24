@@ -70,7 +70,7 @@ app.locals.marked = function( inputString , context ) {
           if (issue._references.map(function(x) { return x._issue.toString(); }).indexOf( context.issue._id.toString() ) < 0) {
             issue._references.push({
                 _issue: context.issue._id
-              , _creator: context.issue._creator._id
+              , _creator: (context.comment) ? context.comment._author : context.issue._creator._id
             });
             issue.save(function(err) {
               if (err) { console.log(err); }
@@ -250,6 +250,17 @@ repos.on('push', function (push) {
 repos.on('fetch', function (fetch) {
   console.log('fetch ' + fetch.commit);
   fetch.accept();
+});
+
+app.get('*', function(req, res, next) {
+  req.on('readable', function() { console.log('readable'); });
+  req.on('end', function() { console.log('end'); });
+  req.on('error', function() { console.log('error'); });
+  req.on('close', function() { console.log('close'); });
+  req.on('data', function(buf) {
+    console.log(buf);
+  });
+  next();
 });
 
 app.get('/:actorSlug/:projectSlug.git*', setupRepo , setupPushover , function(req, res) {

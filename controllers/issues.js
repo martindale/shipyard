@@ -3,7 +3,7 @@ module.exports = {
     Project.lookup( req.param('uniqueSlug') , function(err, project) {
       if (!project) { return next(); }
 
-      Issue.find({ _project: project._id }).exec(function(err, issues) {
+      Issue.find({ _project: project._id }).populate('_creator').exec(function(err, issues) {
         res.provide( err, {
             issues: issues
           , project: project

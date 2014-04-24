@@ -7,9 +7,9 @@ block prepend projectHeader
 
 block append projectTitle
   |  / 
-  a(href="/#{project.slug}/#{project._owner.slug}/issues") issues
+  a(href="/#{project._owner.slug}/#{project.slug}/issues") issues
   |  / 
-  a(href="/#{project.slug}/#{project._owner.slug}/issues/#{issue.id}") ##{issue.id}
+  a(href="/#{project._owner.slug}/#{project.slug}/issues/#{issue.id}") ##{issue.id}
 
 
 block content
