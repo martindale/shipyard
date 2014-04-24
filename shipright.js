@@ -1,5 +1,3 @@
-require('debug-trace')({ always: true });
-
 var fs = require('fs')
   , express = require('express')
   , app = express()
