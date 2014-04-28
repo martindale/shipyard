@@ -9,13 +9,16 @@ var mongoose = require('mongoose')
 // and moreover, their type.
 var AccountSchema = new Schema({
     username: { type: String, required: true }
-  , email:    { type: String, required: true }
+  , emails:   [ { type: String, required: true } ]
   , image: {
         url: { type: String, default: '/img/user-avatar.png' }
       , small: { type: String, default: '/img/user-avatar.png' }
     }
   , created:  { type: Date, required: true, default: Date.now }
   , _actor:   { type: ObjectId, ref: 'Actor' }
+  , profiles: {
+      google: [ new Schema({ id: String , email: String }) ]
+    }
 });
 
 // attach the passport fields to the model

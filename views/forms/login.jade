@@ -9,4 +9,7 @@ form(action="/login", method="post")
     label(for="password") Password
     input.form-control(type="password", name="password")
 
-  button.btn.btn-default.pull-right(type="submit") Log In &raquo;
+  .pull-right
+    a.btn.btn-default(href="/auth/google")
+      i.fa.fa-google-plus
+    button.btn.btn-default(type="submit") Log In &raquo;

@@ -6,18 +6,16 @@ block content
 
     .row
       .col-md-8
-        ul.nav.nav-list
+        .nav-group
           each activity in activities
-            li
-              a(href="/activities/#{activity._id}") #{activity._id}
+            a.list-group-item(href="/activities/#{activity._id}") #{activity._id}
 
       .col-md-4
         h2
           a(href="/projects") Projects
-        ul.nav.nav-list
+        .nav-group
           each project in projects
-            li
-              a(href="/#{project._owner.slug}/#{project.slug}") #{project.name}
+            a.list-group-item(href="/#{project._owner.slug}/#{project.slug}") #{project._owner.slug}/#{project.slug}
       
   else
     .jumbotron
@@ -31,10 +29,10 @@ block content
       .col-md-4
         h2
           a(href="/projects") Projects
-        ul.nav.nav-list
+        ul.nav-group
           each project in projects
-            li
-              a(href="/#{project._owner.slug}/#{project.slug}") #{project.name}
+            li.list-group-item
+              a(href="/#{project._owner.slug}/#{project.slug}") #{project._owner.slug}/#{project.slug}
       .col-md-4
         h2 Recently...
         ul.nav.nav-list

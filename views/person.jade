@@ -6,6 +6,14 @@ block content
     |  
     small a craftsman of code
 
+  .profiles
+    each googleProfile in person.profiles.google
+      i.fa.fa-google-plus
+    else
+      a.btn.btn-default(href="/auth/google")
+        i.fa.fa-google-plus
+        |  Add Google Profile &raquo;
+
   h2 Projects
   ul.nav.nav-list
     each project in projects

@@ -1,3 +1,5 @@
+require('debug-trace')({ always: true })
+
 var fs = require('fs')
   , express = require('express')
   , app = express()
@@ -5,6 +7,7 @@ var fs = require('fs')
   , flashify = require('flashify')
   , passport = require('passport')
   , LocalStrategy = require('passport-local').Strategy
+  , GoogleStrategy = require('passport-google').Strategy
   , passportLocalMongoose = require('passport-local-mongoose')
   , RedisStore = require('connect-redis')(express)
   , redis = require('redis');
@@ -80,6 +83,18 @@ app.locals.marked = function( inputString , context ) {
         });
       });
     }
+
+    var mentions = parsed.match(/(\@)(\w+)/g);
+    parsed = parsed.replace(/(\@)(\w+)/g, '<a href="/$2">$1$2</a>');
+    if (mentions) {
+      mentions.forEach(function(username) {
+        Actor.findOne({ slug: username }).exec(function(err, actor) {
+          // TODO: notify user
+          // TODO: notification system
+        });
+      });
+    }
+
   }
   return parsed;
 };
@@ -112,6 +127,41 @@ app.use(passport.session());
 app.set('view engine', 'jade');
 
 passport.use(new LocalStrategy( Account.authenticate() ) );
+passport.use(new GoogleStrategy({
+    returnURL: 'http://eric.bp:9200/auth/google/callback',
+    realm: 'http://eric.bp:9200/',
+    passReqToCallback: true
+  },
+  function(req, identifier, user, done) {
+    console.log(user);
+
+    Account.findOne({
+      $or: [
+          { 'profiles.google.id': identifier },
+          { _id: (req.user) ? req.user._id : undefined }
+        ]
+    }).exec(function(err, account) {
+      if (err) { return done(err); }
+      if (!account) {
+        var account = new Account();
+      }
+
+      if (account.profiles.google.map(function(x) { return x.id; }).indexOf( identifier ) < 0) {
+        account.profiles.google.push({
+          id: identifier
+        });
+      }
+
+      account.emails = _.union( account.emails , user.emails.map(function(x) { return x.value; } ) );
+      if (!account.username) { account.username = user.displayName; }
+
+      account.save(function(err) {
+        done(err, account);
+      });
+
+    });
+  }
+));
 
 passport.serializeUser( Account.serializeUser() );
 passport.deserializeUser( Account.deserializeUser() );
@@ -155,6 +205,16 @@ function requireLogin(req, res, next) {
 
 app.get('/', pages.index );
 
+app.get('/auth/google',
+  passport.authenticate('google'));
+
+app.get('/auth/google/callback', 
+  passport.authenticate('google', { failureRedirect: '/login' }),
+  function(req, res) {
+    // Successful authentication, redirect home.
+    res.redirect('/');
+  });
+
 app.get('/register', function(req, res) {
   res.render('register');
 });
@@ -171,7 +231,7 @@ app.get('/login', function(req, res) {
 });
 
 /* when a POST request is made to '/register'... */
-app.post('/register', function(req, res) {
+app.post('/register', function(req, res, next) {
   Account.register(new Account({ email : req.body.email, username : req.body.username }), req.body.password, function(err, user) {
     if (err) {
       console.log(err);
@@ -235,7 +295,7 @@ function setupPushover(req, res, next) {
     next();
   });
 }
-var pushover = require('./lib/pushover');
+var pushover = require('pushover');
 
 var repos = pushover( config.git.data.path , {
   checkout: true
