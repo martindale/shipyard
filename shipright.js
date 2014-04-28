@@ -28,6 +28,11 @@ database = require('./db');
 
 // quick hack
 config.git.data.path = __dirname + '/' + config.git.data.path;
+if (!fs.existsSync( config.git.data.path )) {
+  fs.mkdirSync( config.git.data.path , 0766 , function(err) {
+    if (err) { console.log(err); }
+  });
+}
 
 // GLOBAL LIBRARIES
 // TODO: should we do this?
