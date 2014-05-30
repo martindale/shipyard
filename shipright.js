@@ -1,16 +1,16 @@
 require('debug-trace')({ always: true })
 
-var fs = require('fs')
-  , express = require('express')
-  , app = express()
-  , mongoose = require('mongoose')
-  , flashify = require('flashify')
-  , passport = require('passport')
-  , LocalStrategy = require('passport-local').Strategy
-  , GoogleStrategy = require('passport-google').Strategy
-  , passportLocalMongoose = require('passport-local-mongoose')
-  , RedisStore = require('connect-redis')(express)
-  , redis = require('redis');
+var fs = require('fs');
+var express = require('express');
+var app = express();
+var mongoose = require('mongoose');
+var flashify = require('flashify');
+var passport = require('passport');
+var LocalStrategy = require('passport-local').Strategy;
+var GoogleStrategy = require('passport-google').Strategy;
+var passportLocalMongoose = require('passport-local-mongoose');
+var RedisStore = require('connect-redis')(express);
+var redis = require('redis');
 
 var moment = require('moment');
 var marked = require('marked');
@@ -117,10 +117,9 @@ app.use(express.static(__dirname + '/public'));
 app.engine('jade', require('jade').__express);
 
 // set up middlewares for session handling
-app.use(express.cookieParser( config.cookieSecret ));
-app.use(express.bodyParser());
-app.use(express.methodOverride());
-app.use(express.session({
+app.use( require('cookie-parser')( config.cookieSecret ) );
+app.use( require('body-parser')() );
+app.use( require('express-session')({
     secret: config.cookieSecret
   , store: sessionStore
 }));
@@ -349,4 +348,3 @@ app.get('*', function(req, res) {
 app.listen( config.appPort , function() {
   console.log('Demo application is now listening on http://localhost:' + config.appPort + ' ...');
 });
-
