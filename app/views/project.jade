@@ -9,7 +9,7 @@ block content
 
   include partials/project-header
 
-  pre http://localhost:9200/#{project._owner.slug}/#{project.slug}.git
+  pre http://localhost:9203/#{project._owner.slug}/#{project.slug}.git
 
   .dropdown
     a.btn.btn-default(href="/#{project._owner.slug}/#{project.slug}/branches", data-toggle="dropdown") 
@@ -91,4 +91,3 @@ block content
         .modal-footer
           button.btn.btn-default(type="button", data-dismiss="modal") Close
           button.btn.btn-primary(type="submit") Continue &raquo;
-

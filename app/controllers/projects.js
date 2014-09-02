@@ -131,7 +131,7 @@ module.exports = {
           project._owner = owner;
           project.path = config.git.data.path + '/' + project._id; // remove with lean()
 
-          var repo = git( config.git.data.path + '/' + project._id );
+          //var repo = git( config.git.data.path + '/' + project._id );
 
           var branch = req.param('branchName') || 'master';
 
@@ -185,7 +185,7 @@ module.exports = {
 
                     res.provide( err , {
                         project: project
-                      , repo: repo
+                      //, repo: repo
                       , branch: branch
                       , branches: branches
                       , commits: commits
