@@ -247,11 +247,27 @@ app.repos.on('fetch', function (fetch) {
   fetch.accept();
 });
 
-app.get('/:actorSlug/:projectSlug\.git*', setupRepo , setupPushover , function(req, res) {
+var gitAcceptRegex = new RegExp('^application/x-git(.*)');
+var gitAgentRegex = new RegExp('^git/(.*)');
+app.get('/:actorSlug/:projectSlug*', setupRepo , setupPushover , function(req, res, next) {
+  
+  console.log(req.headers);
+  
+  console.log('REQ PATH', req.path );
+  console.log('REQ ACCEPT', req.headers.accept );
+  
+  if (!gitAgentRegex.exec( req.headers['user-agent'] ) ) return next();
   console.log('handling get....');
   app.repos.handle(req, res);
 });
-app.post('/:actorSlug/:projectSlug\.git*', setupRepo , setupPushover , function(req, res) {
+app.post('/:actorSlug/:projectSlug*', setupRepo , setupPushover , function(req, res, next) {
+  
+  console.log(req.headers);
+  
+  console.log('REQ PATH', req.path );
+  console.log('REQ ACCEPT', req.headers.accept );
+  
+  if (!gitAcceptRegex.exec( req.headers.accept ) ) return next();
   console.log('handling post....');
   app.repos.handle(req, res);
 });
