@@ -22,6 +22,9 @@ block content
       each availableBranch in branches
         li(class=((branch == availableBranch) ? 'active' : undefined))
           a(href="/#{project._owner.slug}/#{project.slug}/tree/#{availableBranch}") #{availableBranch}
+  p
+    strong Latest:
+    |  #{commits[0].id}
 
   hr
 
