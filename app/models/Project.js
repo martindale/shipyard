@@ -27,14 +27,7 @@ ProjectSchema.statics.getForks = function( parent , callback ) {
 Project.find({ _upstream: parent._id }/*/, { _id: 1 , slug: 1 }/**/).exec(function(err, forks) {
     var collectors = forks.map(function(fork) {
       return function(done) {
-        
-        // TODO: call .lookup for all
-        return done( null, fork );
-        //console.log(fork);
-        
-        //Project.lookup( fork.uniqueSlug , done );
-        
-        
+        Project.lookup({ actor: { _id: fork._owner } }, done );
       }
     });
     async.parallel( collectors , callback );

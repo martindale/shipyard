@@ -1,6 +1,6 @@
 module.exports = {
   list: function(req, res, next) {
-    Project.lookup( req.param('uniqueSlug') , function(err, project) {
+    Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
       if (!project) { return next(); }
 
       Issue.find({ _project: project._id }).populate('_creator').exec(function(err, issues) {
@@ -14,7 +14,7 @@ module.exports = {
     });
   },
   view: function(req, res, next) {
-    Project.lookup( req.param('uniqueSlug') , function(err, project) {
+    Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
       if (!project) { return next(); }
 
       Issue.findOne({ _project: project._id, id: req.param('issueID') }).populate('_creator _comments _references._issue _references._creator').exec(function(err, issue) {
@@ -35,7 +35,7 @@ module.exports = {
     });
   },
   addComment: function(req, res, next) {
-    Project.lookup( req.param('uniqueSlug') , function(err, project) {
+    Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
       if (!project) { return next(); }
 
       Issue.findOne({ _project: project._id, id: req.param('issueID') }).exec(function(err, issue) {
@@ -55,7 +55,7 @@ module.exports = {
     });
   },
   createForm: function(req, res, next) {
-    Project.lookup( req.param('uniqueSlug') , function(err, project) {
+    Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
       if (!project) { return next(); }
 
       res.render('issue-new', {
@@ -65,7 +65,7 @@ module.exports = {
     });
   },
   create: function(req, res, next) {
-    Project.lookup( req.param('uniqueSlug') , function(err, project) {
+    Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
       if (!project) { return next(); }
 
       Issue.find({ _project: project._id }, { id: 1 }).exec(function(err, issues) {
