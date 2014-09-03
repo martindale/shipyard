@@ -206,6 +206,29 @@ function requireLogin(req, res, next) {
   });
 }
 
+var pushover = require('./lib/pushover');
+app.repos = pushover( config.git.data.path );
+
+app.repos.on('push', function (push) {
+  console.log('push ' + push.repo + '/' + push.commit
+      + ' (' + push.branch + ')'
+  );
+  push.accept();
+});
+app.repos.on('fetch', function (fetch) {
+  console.log('fetch ' + fetch.commit);
+  fetch.accept();
+});
+
+app.get('/:actorSlug/:projectSlug\.git*', setupRepo , setupPushover , function(req, res) {
+  console.log('handling get....');
+  app.repos.handle(req, res);
+});
+app.post('/:actorSlug/:projectSlug\.git*', setupRepo , setupPushover , function(req, res) {
+  console.log('handling post....');
+  app.repos.handle(req, res);
+});
+
 app.get('/', pages.index );
 
 app.get('/auth/google',
@@ -291,6 +314,9 @@ app.get('/:actorSlug/:projectSlug/blob/:branchName/:filePath',  setupRepo , proj
 app.get('/:actorSlug/:projectSlug/commit/:commitID',            setupRepo , projects.viewCommit );
 
 function setupPushover(req, res, next) {
+  
+  console.log('SETUP PUSHOVER');
+  
   req.pause();
   Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
     if (err) { console.log(err); }
@@ -311,33 +337,4 @@ app.get('*', function(req, res) {
   res.status(404).render('404');
 });
 
-var pushover = require('./lib/pushover');
-app.repos = pushover( config.git.data.path );
-
-app.repos.on('push', function (push) {
-  console.log('push ' + push.repo + '/' + push.commit
-      + ' (' + push.branch + ')'
-  );
-  push.accept();
-});
-app.repos.on('fetch', function (fetch) {
-  console.log('fetch ' + fetch.commit);
-  fetch.accept();
-});
-
-app.get('/:actorSlug/:projectSlug.git(.*)', setupRepo , setupPushover , function(req, res) {
-  console.log('handling get....')
-  app.repos.handle(req, res);
-});
-app.post('/:actorSlug/:projectSlug.git(.*)', setupRepo , setupPushover , function(req, res) {
-  console.log('handling post....')
-  app.repos.handle(req, res);
-});
-
-var httpPort = config.appPort;
-var gitPort = config.appPort + 1;
-var appPort = config.appPort + 2;
-
-var realGitPort = config.appPort + 3;
-
-app.listen( httpPort );
+app.listen( config.appPort );
