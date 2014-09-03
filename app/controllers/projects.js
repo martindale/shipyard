@@ -62,8 +62,6 @@ module.exports = {
 
       var command = 'cd ' + project.path + ' && git show ' + req.param('branchName') + ':' + req.param('filePath');
       exec( command , function(err, stdout, stderr) {
-        
-        console.log( stdout ); process.exit();
 
         var raw = stdout;
         var contents = raw;
