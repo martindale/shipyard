@@ -43,34 +43,13 @@ module.exports = {
       exec( 'cd ' + project.path + ' && git diff '+req.param('commitID')+'^ '+req.param('commitID') , function(err, stdout, stderr) {
         if (err) { console.log(err); }
         if (stderr) { return next(); }
-          
-          console.log( stdout );
-          
-        var diff = stdout;
-        
-        
-        var diffClasses = {
-          "d": "file",
-          "i": "file",
-          "@": "info",
-          "-": "delete",
-          "+": "insert",
-          " ": "context"
-        };
 
-        function escape( str ) {
-          return str
-            .replace( /&/g, "&amp;" )
-            .replace( /</g, "&lt;" )
-            .replace( />/g, "&gt;" )
-            .replace( /\t/g, "    " );
-        }
-        
-        var html = diff.split('\n').map(function( line ) {
-          var type = line.charAt( 0 );
-          return '<pre class="' + diffClasses[ type ] + '">' + escape( line ) + '</pre>';
-        }).join( '\n' );
+        var rawDiff = stdout;
 
+        var diff = require('/Users/eric/pretty-diff/pretty-diff');
+        
+        var html = diff( rawDiff );
+      
         res.provide(err , {
           commit: {
               id: req.param('commitID')
