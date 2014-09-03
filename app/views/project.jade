@@ -9,7 +9,7 @@ block content
 
   include partials/project-header
 
-  pre http://localhost:9200/#{project._owner.slug}/#{project.slug}.git
+  pre http://#{config.http.host}:#{config.http.port}/#{project._owner.slug}/#{project.slug}
   
   pre #{project._id}
 

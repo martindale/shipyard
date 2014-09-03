@@ -357,4 +357,4 @@ app.get('*', function(req, res) {
   res.status(404).render('404');
 });
 
-app.listen( config.appPort );
+app.listen( config.http.port );
