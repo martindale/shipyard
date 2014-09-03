@@ -27,7 +27,7 @@ module.exports = {
   },
   git: {
     refs: function(req, res, next) {
-      Project.lookup( req.param('uniqueSlug') , function(err, project) {
+      Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
         if (err) { return next(); }
         exec('git receive-pack ' + project.path , function(err, stdout, stderr) {
           res.send( stdout );
@@ -36,7 +36,7 @@ module.exports = {
     }
   },
   viewCommit: function(req, res, next) {
-    Project.lookup( req.param('uniqueSlug') , function(err, project) {
+    Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
       if (!project) { return next(); }
 
       //var diff = require('../lib/pretty-diff');
@@ -57,7 +57,7 @@ module.exports = {
     });
   },
   viewBlob: function(req, res, next) {
-    Project.lookup( req.param('uniqueSlug') , function(err, project) {
+    Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
       if (!project) { return next(); }
 
       var command = 'cd ' + project.path + ' && git show ' + req.param('branchName') + ':' + req.param('filePath');
@@ -117,7 +117,7 @@ module.exports = {
     });
   },
   view: function(req, res, next) {
-    Project.lookup( req.param('uniqueSlug') , function(err, project) {
+    Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
       if (err) return next( err );
       if (!project) { return next(); }
 

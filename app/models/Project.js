@@ -41,18 +41,29 @@ Project.find({ _upstream: parent._id }/*/, { _id: 1 , slug: 1 }/**/).exec(functi
   });
 }
 
-ProjectSchema.statics.lookup = function( uniqueSlug , callback) {
-  var parts = uniqueSlug.split('/');
-  var actorSlug = parts[0];
-  var projectSlug = parts[1];
+ProjectSchema.statics.lookup = function( params , callback) {
+  var actorQuery = {};
 
-  Actor.findOne({ slug: actorSlug }).exec(function(err, actor) {
-    if (!actor) { return callback(404); }
+  if (params.uniqueSlug) {
+    var parts = params.uniqueSlug.split('/');
+    var actorSlug = parts[0];
+    var projectSlug = parts[1];
     
-    Project.findOne({
-        _owner: actor._id
-      , slug: projectSlug
-    }).populate('_owner _upstream').exec(function(err, project) {
+    actorQuery.slug = actorSlug;
+  } else if (params.actor && params.actor._id ) {
+    actorQuery._id = params.actor._id;
+  } else {
+    return callback('no actor supplied in project lookup');
+  }
+
+  Actor.findOne( actorQuery ).exec(function(err, actor) {
+    if (!actor) { return callback(404); }
+      
+    var projectQuery = { _owner: actor._id };
+    
+    if (projectSlug) projectQuery.slug = projectSlug;
+    
+    Project.findOne( projectQuery ).populate('_owner _upstream').exec(function(err, project) {
       if (!project) return callback(404);
       if (!project._upstream) return callback( err , project );
 
