@@ -206,6 +206,33 @@ function requireLogin(req, res, next) {
   });
 }
 
+function setupRepo(req, res, next) {
+  req.pause();
+  req.params.projectSlug = req.params.projectSlug.replace('.git', '');
+  req.params.uniqueSlug = req.param('actorSlug') + '/' + req.param('projectSlug');
+
+  console.log('sup dawg', req.param('uniqueSlug'));
+
+  req.resume();
+  next();
+}
+
+function setupPushover(req, res, next) {
+  
+  console.log('SETUP PUSHOVER');
+  
+  req.pause();
+  Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
+    if (err) { console.log(err); }
+    if (!project) { return next(); }
+
+    req.projectID = project._id.toString();
+    req.resume();
+    next();
+  });
+}
+
+
 var pushover = require('./lib/pushover');
 app.repos = pushover( config.git.data.path );
 
@@ -301,32 +328,9 @@ app.post('/:actorSlug/:projectSlug/issues',          requireLogin , setupRepo, i
 
 app.post('/:actorSlug/:projectSlug/issues/:issueID/comments', requireLogin , setupRepo, issues.addComment );
 
-function setupRepo(req, res, next) {
-  req.params.projectSlug = req.params.projectSlug.replace('.git', '');
-  req.params.uniqueSlug = req.param('actorSlug') + '/' + req.param('projectSlug');
-
-  console.log('sup dawg', req.param('uniqueSlug'));
-
-  next();
-}
 //app.get('/:actorSlug/:projectSlug.git/info/refs',               setupRepo , projects.git.refs );
 app.get('/:actorSlug/:projectSlug/blob/:branchName/:filePath',  setupRepo , projects.viewBlob );
 app.get('/:actorSlug/:projectSlug/commit/:commitID',            setupRepo , projects.viewCommit );
-
-function setupPushover(req, res, next) {
-  
-  console.log('SETUP PUSHOVER');
-  
-  req.pause();
-  Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
-    if (err) { console.log(err); }
-    if (!project) { return next(); }
-
-    req.projectID = project._id.toString();
-    req.resume();
-    next();
-  });
-}
 
 app.get('/people', people.list);
 
