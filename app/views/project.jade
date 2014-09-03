@@ -9,7 +9,9 @@ block content
 
   include partials/project-header
 
-  pre http://localhost:9200/#{project._owner.slug}/#{project.slug}.git
+  pre http://#{config.http.host}:#{config.http.port}/#{project._owner.slug}/#{project.slug}
+  
+  pre #{project._id}
 
   .dropdown
     a.btn.btn-default(href="/#{project._owner.slug}/#{project.slug}/branches", data-toggle="dropdown") 
@@ -36,6 +38,10 @@ block content
       a(href="#docks", data-toggle="tab")
         i.fa.fa-users
         |  Docks
+    li
+      a(href="#network", data-toggle="tab")
+        i.fa.fa-code-fork
+        |  Network
 
   .tab-content
     .tab-pane.active#code
@@ -72,6 +78,14 @@ block content
           tr
             td #{dock.id}
             td #{dock.title}
+            
+    .tab-pane#network
+      h2 Network
+      ul.nav.nav-list
+      each fork in forks
+        - var project = fork
+        li
+          include partials/project-name
 
   form.modal.fade#modal-fork(action="/projects", method="post")
     input(type="hidden", name="fromProjectID", value="#{project._id}")
@@ -91,4 +105,3 @@ block content
         .modal-footer
           button.btn.btn-default(type="button", data-dismiss="modal") Close
           button.btn.btn-primary(type="submit") Continue &raquo;
-

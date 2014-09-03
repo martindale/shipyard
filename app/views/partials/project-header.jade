@@ -1,0 +1,8 @@
+block projectHeader
+  h1
+    block projectTitle
+      include project-name
+  if (project._upstream)
+    h2
+      small forked from 
+        a(href="/#{project._upstream._owner.slug}/#{project._upstream.slug}") #{project._upstream._owner.slug}/#{project._upstream.slug}

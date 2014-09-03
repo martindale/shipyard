@@ -1,6 +1,7 @@
 require('debug-trace')({ always: true })
 
 var fs = require('fs');
+
 var express = require('express');
 var app = express();
 var mongoose = require('mongoose');
@@ -38,23 +39,22 @@ if (!fs.existsSync( config.git.data.path )) {
 // TODO: should we do this?
 _     = require('underscore');
 async = require('async');
-Git   = require('nodegit');
-git   = require('gitty'); // thanks, @gordonwritescode!
+//git   = require('gitty'); // thanks, @gordonwritescode!
 
-Account = People  = require('./models/Account').Account;
-Comment           = require('./models/Comment').Comment;
-Issue             = require('./models/Issue').Issue;
-Organization      = require('./models/Organization').Organization;
-Project           = require('./models/Project').Project;
+Account = People  = require('./app/models/Account').Account;
+Comment           = require('./app/models/Comment').Comment;
+Issue             = require('./app/models/Issue').Issue;
+Organization      = require('./app/models/Organization').Organization;
+Project           = require('./app/models/Project').Project;
 
-Actor             = require('./models/Actor').Actor;
-Activity          = require('./models/Activity').Activity;
+Actor             = require('./app/models/Actor').Actor;
+Activity          = require('./app/models/Activity').Activity;
 
-var pages         = require('./controllers/pages');
-var people        = require('./controllers/people');
-var projects      = require('./controllers/projects');
-var organizations = require('./controllers/organizations');
-var issues        = require('./controllers/issues');
+var pages         = require('./app/controllers/pages');
+var people        = require('./app/controllers/people');
+var projects      = require('./app/controllers/projects');
+var organizations = require('./app/controllers/organizations');
+var issues        = require('./app/controllers/issues');
 
 app.locals.pretty = true;
 app.locals.moment = moment;
@@ -129,6 +129,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.set('view engine', 'jade');
+app.set('views', 'app/views');
 
 passport.use(new LocalStrategy( Account.authenticate() ) );
 passport.use(new GoogleStrategy({
@@ -137,8 +138,6 @@ passport.use(new GoogleStrategy({
     passReqToCallback: true
   },
   function(req, identifier, user, done) {
-    console.log(user);
-
     Account.findOne({
       $or: [
           { 'profiles.google.id': identifier },
@@ -206,6 +205,72 @@ function requireLogin(req, res, next) {
     next: req.path
   });
 }
+
+function setupRepo(req, res, next) {
+  req.pause();
+  req.params.projectSlug = req.params.projectSlug.replace('.git', '');
+  req.params.uniqueSlug = req.param('actorSlug') + '/' + req.param('projectSlug');
+
+  console.log('sup dawg', req.param('uniqueSlug'));
+
+  req.resume();
+  next();
+}
+
+function setupPushover(req, res, next) {
+  
+  console.log('SETUP PUSHOVER');
+  
+  req.pause();
+  Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
+    if (err) { console.log(err); }
+    if (!project) { return next(); }
+
+    req.projectID = project._id.toString();
+    req.resume();
+    next();
+  });
+}
+
+
+var pushover = require('./lib/pushover');
+app.repos = pushover( config.git.data.path );
+
+app.repos.on('push', function (push) {
+  console.log('push ' + push.repo + '/' + push.commit
+      + ' (' + push.branch + ')'
+  );
+  push.accept();
+});
+app.repos.on('fetch', function (fetch) {
+  console.log('fetch ' + fetch.commit);
+  fetch.accept();
+});
+
+var gitAcceptRegex = new RegExp('^application/x-git(.*)');
+var gitAgentRegex = new RegExp('^git/(.*)');
+app.get('/:actorSlug/:projectSlug*', setupRepo , setupPushover , function(req, res, next) {
+  
+  console.log(req.headers);
+  
+  console.log('REQ PATH', req.path );
+  console.log('REQ ACCEPT', req.headers.accept );
+  
+  if (!gitAgentRegex.exec( req.headers['user-agent'] ) ) return next();
+  console.log('handling get....');
+  app.repos.handle(req, res);
+});
+app.post('/:actorSlug/:projectSlug*', setupRepo , setupPushover , function(req, res, next) {
+  
+  console.log(req.headers);
+  
+  console.log('REQ PATH', req.path );
+  console.log('REQ ACCEPT', req.headers.accept );
+  
+  if (!gitAcceptRegex.exec( req.headers.accept ) ) return next();
+  console.log('handling post....');
+  app.repos.handle(req, res);
+});
 
 app.get('/', pages.index );
 
@@ -279,62 +344,9 @@ app.post('/:actorSlug/:projectSlug/issues',          requireLogin , setupRepo, i
 
 app.post('/:actorSlug/:projectSlug/issues/:issueID/comments', requireLogin , setupRepo, issues.addComment );
 
-function setupRepo(req, res, next) {
-  req.params.projectSlug = req.params.projectSlug.replace('.git', '');
-  req.params.uniqueSlug = req.param('actorSlug') + '/' + req.param('projectSlug');
-
-  next();
-}
 //app.get('/:actorSlug/:projectSlug.git/info/refs',               setupRepo , projects.git.refs );
 app.get('/:actorSlug/:projectSlug/blob/:branchName/:filePath',  setupRepo , projects.viewBlob );
 app.get('/:actorSlug/:projectSlug/commit/:commitID',            setupRepo , projects.viewCommit );
-
-function setupPushover(req, res, next) {
-  Project.lookup( req.param('uniqueSlug') , function(err, project) {
-    if (err) { console.log(err); }
-    if (!project) { return next(); }
-
-    req.projectID = project._id.toString();
-
-    next();
-  });
-}
-var pushover = require('pushover');
-
-var repos = pushover( config.git.data.path , {
-  checkout: true
-});
-
-repos.on('push', function (push) {
-  console.log('push ' + push.repo + '/' + push.commit
-      + ' (' + push.branch + ')'
-  );
-  push.accept();
-});
-repos.on('fetch', function (fetch) {
-  console.log('fetch ' + fetch.commit);
-  fetch.accept();
-});
-
-app.get('*', function(req, res, next) {
-  req.on('readable', function() { console.log('readable'); });
-  req.on('end', function() { console.log('end'); });
-  req.on('error', function() { console.log('error'); });
-  req.on('close', function() { console.log('close'); });
-  req.on('data', function(buf) {
-    console.log(buf);
-  });
-  next();
-});
-
-app.get('/:actorSlug/:projectSlug.git*', setupRepo , setupPushover , function(req, res) {
-  console.log('handling get....')
-  repos.handle(req, res);
-});
-app.post('/:actorSlug/:projectSlug.git*', setupRepo , setupPushover , function(req, res) {
-  console.log('handling post....')
-  repos.handle(req, res);
-});
 
 app.get('/people', people.list);
 
@@ -345,6 +357,4 @@ app.get('*', function(req, res) {
   res.status(404).render('404');
 });
 
-app.listen( config.appPort , function() {
-  console.log('Demo application is now listening on http://localhost:' + config.appPort + ' ...');
-});
+app.listen( config.http.port );
