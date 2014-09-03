@@ -282,6 +282,8 @@ function setupRepo(req, res, next) {
   req.params.projectSlug = req.params.projectSlug.replace('.git', '');
   req.params.uniqueSlug = req.param('actorSlug') + '/' + req.param('projectSlug');
 
+  console.log('sup dawg', req.param('uniqueSlug'));
+
   next();
 }
 //app.get('/:actorSlug/:projectSlug.git/info/refs',               setupRepo , projects.git.refs );
@@ -289,12 +291,13 @@ app.get('/:actorSlug/:projectSlug/blob/:branchName/:filePath',  setupRepo , proj
 app.get('/:actorSlug/:projectSlug/commit/:commitID',            setupRepo , projects.viewCommit );
 
 function setupPushover(req, res, next) {
-  Project.lookup( req.param('uniqueSlug') , function(err, project) {
+  req.pause();
+  Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
     if (err) { console.log(err); }
     if (!project) { return next(); }
 
     req.projectID = project._id.toString();
-
+    req.resume();
     next();
   });
 }
@@ -308,44 +311,7 @@ app.get('*', function(req, res) {
   res.status(404).render('404');
 });
 
-
-var pushover = require('pushover');
-var repos = pushover( config.git.data.path );
-
-repos.on('push', function (push) {
-  console.log('push ' + push.repo + '/' + push.commit
-      + ' (' + push.branch + ')'
-  );
-  setTimeout(function() {
-    console.log('sup')
-    push.accept();
-  }, 1000);
-  
-});
-repos.on('fetch', function (fetch) {
-  console.log('fetch ' + fetch.commit);
-  fetch.accept();
-});
-
-/*app.get('/:actorSlug/:projectSlug.git*', setupRepo , setupPushover , function(req, res) {
-  console.log('handling get....')
-  repos.handle(req, res);
-});
-app.post('/:actorSlug/:projectSlug.git*', setupRepo , setupPushover , function(req, res) {
-  console.log('handling post....')
-  repos.handle(req, res);
-});*/
-
-var httpPort = config.appPort;
-var gitPort = config.appPort + 1;
-var appPort = config.appPort + 2;
-
-var realGitPort = config.appPort + 3;
-
-var pathToRegex = require('path-to-regexp');
-var gitRegex = pathToRegex('/:actorSlug/:projectSlug.git(.*)');
-
-var pushover = require('/Users/eric/pushover');
+var pushover = require('./lib/pushover');
 app.repos = pushover( config.git.data.path );
 
 app.repos.on('push', function (push) {
@@ -354,34 +320,24 @@ app.repos.on('push', function (push) {
   );
   push.accept();
 });
-
 app.repos.on('fetch', function (fetch) {
   console.log('fetch ' + fetch.commit);
   fetch.accept();
 });
 
-var http = require('http');
-var gitServer = http.createServer(function (req, res) {
-  
-  return app.repos.handle(req, res);
-  
-  if (!req.params) req.params = {};
-
-  var parts = gitRegex.exec( req.url );
-  console.log('parts: ' , parts);
-  req.params.projectSlug = parts[2].replace('.git', '');
-  req.params.uniqueSlug = parts[1] + '/' + req.params.projectSlug;
-  
-  Project.lookup( req.params.uniqueSlug , function(err, project) {
-    if (err) { console.log(err); }
-    //if (!project) { return next(); }
-    req.projectID = project._id.toString();
-    
-    app.repos.handle(req, res);
-  });
+app.get('/:actorSlug/:projectSlug.git(.*)', setupRepo , setupPushover , function(req, res) {
+  console.log('handling get....')
+  app.repos.handle(req, res);
+});
+app.post('/:actorSlug/:projectSlug.git(.*)', setupRepo , setupPushover , function(req, res) {
+  console.log('handling post....')
+  app.repos.handle(req, res);
 });
 
-var httpServer = http.createServer( app );
+var httpPort = config.appPort;
+var gitPort = config.appPort + 1;
+var appPort = config.appPort + 2;
 
-gitServer.listen( realGitPort );
-httpServer.listen( httpPort );
+var realGitPort = config.appPort + 3;
+
+app.listen( httpPort );

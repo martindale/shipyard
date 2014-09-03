@@ -118,6 +118,9 @@ module.exports = {
   },
   view: function(req, res, next) {
     Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
+      
+      console.log('INNNER VIIIIIIIIIIIIEW')
+      
       if (err) return next( err );
       if (!project) { return next(); }
 

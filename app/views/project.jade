@@ -9,7 +9,9 @@ block content
 
   include partials/project-header
 
-  pre http://localhost:9203/#{project._owner.slug}/#{project.slug}.git
+  pre http://localhost:9200/#{project._owner.slug}/#{project.slug}.git
+  
+  pre #{project._id}
 
   .dropdown
     a.btn.btn-default(href="/#{project._owner.slug}/#{project.slug}/branches", data-toggle="dropdown") 
