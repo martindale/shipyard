@@ -2,7 +2,6 @@ var fs = require('fs');
 var exec = require('child_process').exec;
 var mime = require('mime');
 
-
 function cleanGitLog(x) {
   var parts = x.split(/\s/);
 
@@ -201,7 +200,7 @@ module.exports = {
 
                 exec('cd '+project.path+' && git for-each-ref --format=\'%(refname:short)\' refs/heads/', function(err, stdout, stderr) {
                   var branches = stdout.split('\n');
-                  exec('cd '+project.path+' && git log --pretty=oneline', function(err, commits) {
+                  exec('cd '+project.path+' && git log ' + branch + ' --pretty=oneline', function(err, commits) {
 
                     commits = commits.split('\n').map( cleanGitLog );
 
