@@ -62,6 +62,8 @@ module.exports = {
 
       var command = 'cd ' + project.path + ' && git show ' + req.param('branchName') + ':' + req.param('filePath');
       exec( command , function(err, stdout, stderr) {
+        
+        console.log( stdout ); process.exit();
 
         var raw = stdout;
         var contents = raw;
@@ -85,6 +87,19 @@ module.exports = {
           var commits = stdout.split('\n');
           commits = commits.map( cleanGitLog );
 
+
+
+          return res.render('file', {
+            project: project,
+            file: {
+                name: req.param('filePath')
+              , type: type
+              , contents: contents
+              , raw: raw
+              , commits: commits
+            }
+          });
+
           res.provide( err , {
             project: project,
             file: {
@@ -103,6 +118,7 @@ module.exports = {
   },
   view: function(req, res, next) {
     Project.lookup( req.param('uniqueSlug') , function(err, project) {
+      if (err) return next( err );
       if (!project) { return next(); }
 
       async.parallel([
@@ -111,11 +127,15 @@ module.exports = {
         },
         function(done) {
           Issue.find({ _project: project._id, type: 'dock' }).populate('_creator').exec( done );
+        },
+        function(done) {
+          Project.getForks( project , done );
         }
       ], function(err, results) {
 
         var issues = results[0];
         var docks  = results[1];
+        var forks  = results[2];
 
         // temporary hack until we get Organizations
         var context = Account;
@@ -129,9 +149,12 @@ module.exports = {
           if (err) { console.log(err); }
 
           project._owner = owner;
-          project.path = config.git.data.path + '/' + project._id; // remove with lean()
+          //project.path = config.git.data.path + '/' + project._id; // remove with lean()
+          project.path = config.git.data.path + '/' + req.param('uniqueSlug') + '.git'; // remove with lean()
 
           //var repo = git( config.git.data.path + '/' + project._id );
+
+          console.log('project path ' , project.path );
 
           var branch = req.param('branchName') || 'master';
 
@@ -183,6 +206,20 @@ module.exports = {
 
                     commits = commits.split('\n').map( cleanGitLog );
 
+                    console.log('project', project);
+                    
+                    return res.render('project', {
+                        project: project
+                      //, repo: repo
+                      , branch: branch
+                      , branches: branches
+                      , commits: commits
+                      , files: completedTree
+                      , issues: issues
+                      , docks: docks
+                      , forks: forks
+                    });
+
                     res.provide( err , {
                         project: project
                       //, repo: repo
@@ -192,6 +229,7 @@ module.exports = {
                       , files: completedTree
                       , issues: issues
                       , docks: docks
+                      , forks: forks
                     } , {
                       template: 'project'
                     });
@@ -221,7 +259,8 @@ module.exports = {
     project._creator    = req.user._actor;
     project._owner      = req.user._actor;
 
-    var path = config.git.data.path + '/' + project._id ;
+    //var path = config.git.data.path + '/' + project._id ;
+    var path = config.git.data.path + '/' + req.param('uniqueSlug') ;
     var command = '';
 
     if (req.param('fromProjectID')) {
@@ -239,13 +278,28 @@ module.exports = {
 
     function createProject() {
       // TODO: use job scheduler
+      
+      return req.app.repos.create( path , function( err ) {
+        if (err) return next( err );
+        
+        project.save(function(err) {
+          if (err) { console.log(err); }
+          Actor.populate( project , {
+            path: '_owner'
+          } , function(err, project) {
+            if (err) { console.log(err); }
+
+            res.redirect('/' + project._owner.slug + '/' + project.slug )
+          });
+        });
+        
+      });
+      
       exec( command , function(err, stdout, stderr) {
         if (err) { console.log(err); }
-        console.log(stdout);
 
         project.save(function(err) {
           if (err) { console.log(err); }
-
           Actor.populate( project , {
             path: '_owner'
           } , function(err, project) {

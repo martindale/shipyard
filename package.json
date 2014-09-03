@@ -36,7 +36,7 @@
     "passport-local": "~0.1.6",
     "passport-local-mongoose": "~0.2.1",
     "pullover": "0.0.1",
-    "pushover": "latest",
+    "pushover": "git://github.com/martindale/pushover#shipright",
     "redis": "~0.10.1",
     "underscore": "~1.6.0"
   },

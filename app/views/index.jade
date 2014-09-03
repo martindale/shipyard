@@ -6,12 +6,16 @@ block content
 
     .row
       .col-md-8
+        h2 Activity
         .nav-group
           each activity in activities
             a.list-group-item(href="/activities/#{activity._id}") #{activity._id}
+          else
+            h3 No activity (not yet implemented).
 
       .col-md-4
         h2
+          a.btn.btn-default.pull-right(href="/projects/new") Create &raquo;
           a(href="/projects") Projects
         .nav-group
           each project in projects

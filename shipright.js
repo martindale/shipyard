@@ -310,15 +310,13 @@ app.get('*', function(req, res) {
 
 
 var pushover = require('pushover');
-var repos = pushover( config.git.data.path , {
-  checkout: true
-});
+var repos = pushover( config.git.data.path );
 
 repos.on('push', function (push) {
   console.log('push ' + push.repo + '/' + push.commit
       + ' (' + push.branch + ')'
   );
-  process.setTimeout(function() {
+  setTimeout(function() {
     console.log('sup')
     push.accept();
   }, 1000);
@@ -342,85 +340,48 @@ var httpPort = config.appPort;
 var gitPort = config.appPort + 1;
 var appPort = config.appPort + 2;
 
-var httpProxy = require('http-proxy');
-var gitProxy = httpProxy.createProxyServer({
-  target: {
-    host: 'localhost',
-    port: gitPort
-  }
-});
-var appProxy = httpProxy.createProxyServer({
-  target: {
-    host: 'localhost',
-    port: appPort
-  }
-});
-
+var realGitPort = config.appPort + 3;
 
 var pathToRegex = require('path-to-regexp');
 var gitRegex = pathToRegex('/:actorSlug/:projectSlug.git(.*)');
 
-var pushover = require('pushover');
-var nativeRepos = pushover('/tmp/repos');
+var pushover = require('/Users/eric/pushover');
+app.repos = pushover( config.git.data.path );
 
-nativeRepos.on('push', function (push) {
-    console.log('push ' + push.repo + '/' + push.commit
-        + ' (' + push.branch + ')'
-    );
-    setTimeout(function() {
-      console.log('sup NATIVE REPO')
-      push.accept();
-    }, 1000);
+app.repos.on('push', function (push) {
+  console.log('push ' + push.repo + '/' + push.commit
+      + ' (' + push.branch + ')'
+  );
+  push.accept();
 });
 
-nativeRepos.on('fetch', function (fetch) {
-    console.log('fetch ' + fetch.commit);
-    fetch.accept();
+app.repos.on('fetch', function (fetch) {
+  console.log('fetch ' + fetch.commit);
+  fetch.accept();
 });
 
 var http = require('http');
-var server = http.createServer(function (req, res) {
-    repos.handle(req, res);
-});
-server.listen(9203);
-
-var http = require('http');
-var webServer = http.createServer(function(req, res) {
-
-  console.log('REGEX: ' , gitRegex );
-  console.log('URL TO TEST' , req.url );
+var gitServer = http.createServer(function (req, res) {
   
-  if (gitRegex.test( req.url )) {
-    console.log(' HELLLLLOOOOOO GITTTTT')
-
-    gitProxy.web( req , res );
-  } else {
-    appProxy.web( req , res );
-  }
-});
-var appServer = http.createServer( app );
-var gitServer = http.createServer(function(req, res) {
+  return app.repos.handle(req, res);
+  
   if (!req.params) req.params = {};
 
-
   var parts = gitRegex.exec( req.url );
-
   console.log('parts: ' , parts);
-
-
   req.params.projectSlug = parts[2].replace('.git', '');
   req.params.uniqueSlug = parts[1] + '/' + req.params.projectSlug;
   
   Project.lookup( req.params.uniqueSlug , function(err, project) {
     if (err) { console.log(err); }
     //if (!project) { return next(); }
-
     req.projectID = project._id.toString();
     
-    repos.handle(req, res);
-
+    app.repos.handle(req, res);
   });
 });
-gitServer.listen( gitPort );
-appServer.listen( appPort );
-webServer.listen( httpPort );
+
+var httpServer = http.createServer( app );
+
+gitServer.listen( realGitPort );
+httpServer.listen( httpPort );

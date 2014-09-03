@@ -5,4 +5,4 @@ block projectHeader
   if (project._upstream)
     h2
       small forked from 
-        a(href="#") #{project._upstream}
+        a(href="/#{project._upstream._owner.slug}/#{project._upstream.slug}") #{project._upstream._owner.slug}/#{project._upstream.slug}
