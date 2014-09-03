@@ -19,9 +19,9 @@ ProjectSchema.plugin( slug( 'name' , {
   required: true
 }) );
 
-/*ProjectSchema.virtual('path').get(function() {
+ProjectSchema.virtual('path').get(function() {
   return config.git.data.path + '/' + this._id;
-});*/
+});
 
 ProjectSchema.statics.getForks = function( parent , callback ) {
 Project.find({ _upstream: parent._id }/*/, { _id: 1 , slug: 1 }/**/).exec(function(err, forks) {
