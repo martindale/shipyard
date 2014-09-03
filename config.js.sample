@@ -4,7 +4,10 @@
    which sets them when require('./thisfile') is run. */
 
 module.exports = {
-    appPort: 9200
+    http: {
+      port: process.env.SHIPRIGHT_HTTP_PORT || 9200,
+      host: process.env.SHIPRIGHT_HTTP_HOST || 'localhost'
+    }
   , callbackURL: "http://yourapp.com:9200" // set this to the public address of your app
   , cookieSecret: 'this can be any random string, you can even use this one. :)'
   , databaseName: 'shipright'
