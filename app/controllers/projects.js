@@ -46,7 +46,7 @@ module.exports = {
 
         var rawDiff = stdout;
 
-        var diff = require('/Users/eric/pretty-diff/pretty-diff');
+        var diff = require('pretty-diff');
         
         var html = diff( rawDiff );
       
