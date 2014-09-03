@@ -3,4 +3,6 @@ extends layout
 block content
   h1 Commit #{commit.id}
 
-  pre #{commit.diff}
+  code.diff
+    pre
+      !{commit.diff}

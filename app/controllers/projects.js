@@ -43,11 +43,38 @@ module.exports = {
       exec( 'cd ' + project.path + ' && git diff '+req.param('commitID')+'^ '+req.param('commitID') , function(err, stdout, stderr) {
         if (err) { console.log(err); }
         if (stderr) { return next(); }
+          
+          console.log( stdout );
+          
+        var diff = stdout;
+        
+        
+        var diffClasses = {
+          "d": "file",
+          "i": "file",
+          "@": "info",
+          "-": "delete",
+          "+": "insert",
+          " ": "context"
+        };
+
+        function escape( str ) {
+          return str
+            .replace( /&/g, "&amp;" )
+            .replace( /</g, "&lt;" )
+            .replace( />/g, "&gt;" )
+            .replace( /\t/g, "    " );
+        }
+        
+        var html = diff.split('\n').map(function( line ) {
+          var type = line.charAt( 0 );
+          return '<pre class="' + diffClasses[ type ] + '">' + escape( line ) + '</pre>';
+        }).join( '\n' );
 
         res.provide(err , {
           commit: {
               id: req.param('commitID')
-            , diff: stdout
+            , diff: html
           }
         }, {
           template: 'commit'
@@ -79,12 +106,8 @@ module.exports = {
         exec('cd  ' + project.path + ' && git log --pretty=oneline  '+ req.param('filePath'), function(err, stdout, stderr) {
           if (err) { console.log(err); }
 
-          console.log(stdout);
-
           var commits = stdout.split('\n');
           commits = commits.map( cleanGitLog );
-
-
 
           return res.render('file', {
             project: project,
@@ -199,7 +222,12 @@ module.exports = {
                 }
 
                 exec('cd '+project.path+' && git for-each-ref --format=\'%(refname:short)\' refs/heads/', function(err, stdout, stderr) {
-                  var branches = stdout.split('\n');
+                  var branches = stdout.split('\n').map(function(x) {
+                    return x.trim();
+                  }).sort(function(a, b) {
+                    if (a === 'master') return -1;
+                    return a - b;
+                  });
                   exec('cd '+project.path+' && git log ' + branch + ' --pretty=oneline', function(err, commits) {
 
                     commits = commits.split('\n').map( cleanGitLog );
