@@ -25,6 +25,7 @@
     "highlight.js": "~8.0.0",
     "jade": "~0.28.2",
     "less-middleware": "~0.1.14",
+    "maki": "git://github.com/martindale/maki",
     "marked": "~0.3.2",
     "mime": "~1.2.11",
     "moment": "~2.6.0",
