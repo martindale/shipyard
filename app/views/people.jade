@@ -1,10 +1,18 @@
 extends layout
 
 block content
-  h1 People
 
-  ul.list-group
-    //- consider "resource" as what this _view_ is referencing; what resource?
-    for person in resource
-      li.list-group-item
-        include partials/person
+  .row
+    .col-md-12
+      h1
+        a(href="/people")
+          i.fa.fa-user
+          |  People
+  
+  .row
+    .col-md-12
+      ul.list-group
+        //- consider "resource" as what this _view_ is referencing; what resource?
+        for person in resource
+          li.list-group-item
+            include partials/person
