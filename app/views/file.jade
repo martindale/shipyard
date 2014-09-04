@@ -7,25 +7,32 @@ block content
     |  / #{file.name} 
     small #{file.type}
     
+  if (file.commits.length)
+    p
+      - var commit = file.commits[0]
+      include partials/commit-row
+    
   if (files.length)
     include partials/tree
 
   else
     ul.nav.nav-tabs
-      li.active
+      li(class="#{((file.rendered) ? '' : 'active')}")
         a(href="#raw", data-toggle="tab") raw
-      li
-        a(href="#rendered", data-toggle="tab") rendered
+      if (file.rendered)
+        li(class="#{((file.rendered) ? 'active' : '')}")
+          a(href="#rendered", data-toggle="tab") rendered
       li
         a(href="#commits", data-toggle="tab") history
 
     .tab-content
-      .tab-pane.active#raw
+      .tab-pane#raw(class="#{((file.rendered) ? '' : 'active')}")
         pre #{file.raw}
-      .tab-pane#rendered
-        .rendered-content !{file.contents}
+      if (file.rendered)
+        .tab-pane#rendered(class="#{((file.rendered) ? 'active' : '')}")
+          .rendered-content !{file.contents}
       .tab-pane#commits
         h2 Commits
-        ul.nav.nav-list
+        ul.list-group
           each commit in file.commits
             include partials/commit-row

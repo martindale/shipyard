@@ -72,14 +72,17 @@ module.exports = {
 
         var contents = raw;
         var type = mime.lookup( req.param('filePath')  );
+        var rendered = false;
 
         // TODO: build a better handler
         switch (type) {
           case 'text/x-markdown':
             contents = req.app.locals.marked(contents);
+            rendered = true;
           break;
           case 'application/javascript':
             contents = req.app.locals.marked('```js\n' + contents + '```');
+            rendered = true;
           break;
         }
 
@@ -87,34 +90,47 @@ module.exports = {
           repo.prepareTreeView( tree , function( err , treeView ) {
             var files = treeView;
 
-            repo.logFilePretty( filePath , 0, function(err, commits) {
+            // note the use of req.param('filePath') here
+            // -- it doesn't have the trailing slash.
+            repo.logFilePretty( req.param('filePath') , branch , 0 , function(err, commits) {
               if (err) { console.log(err); }
+                
+              // find a corresponding User based on the commit email
+              async.map( commits , function( commit , done ) {
+                Account.lookup( commit.author , function(err, author) {
+                  commit._author = author;
+                  done( err , commit );
+                });
+              }, function(err, results) {
+                commits = results || [];
+                
+                return res.render('file', {
+                  project: project,
+                  branch: branch,
+                  filePath: filePath,
+                  files: files,
+                  file: {
+                      name: req.param('filePath')
+                    , type: type
+                    , contents: contents
+                    , raw: raw
+                    , commits: commits
+                    , rendered: rendered
+                  }
+                });
 
-              return res.render('file', {
-                project: project,
-                branch: branch,
-                filePath: filePath,
-                files: files,
-                file: {
-                    name: filePath
-                  , type: type
-                  , contents: contents
-                  , raw: raw
-                  , commits: commits
-                }
-              });
-
-              res.provide( err , {
-                project: project,
-                file: {
-                    name: req.param('filePath')
-                  , type: type
-                  , contents: contents
-                  , raw: raw
-                  , commits: commits
-                }
-              } , {
-                template: 'file'
+                res.provide( err , {
+                  project: project,
+                  file: {
+                      name: req.param('filePath')
+                    , type: type
+                    , contents: contents
+                    , raw: raw
+                    , commits: commits
+                  }
+                } , {
+                  template: 'file'
+                });
               });
             });
           });
