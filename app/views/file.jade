@@ -6,22 +6,26 @@ block content
     include partials/project-name
     |  / #{file.name} 
     small #{file.type}
+    
+  if (files.length)
+    include partials/tree
 
-  ul.nav.nav-tabs
-    li.active
-      a(href="#raw", data-toggle="tab") raw
-    li
-      a(href="#rendered", data-toggle="tab") rendered
-    li
-      a(href="#commits", data-toggle="tab") history
+  else
+    ul.nav.nav-tabs
+      li.active
+        a(href="#raw", data-toggle="tab") raw
+      li
+        a(href="#rendered", data-toggle="tab") rendered
+      li
+        a(href="#commits", data-toggle="tab") history
 
-  .tab-content
-    .tab-pane.active#raw
-      pre #{file.raw}
-    .tab-pane#rendered
-      .rendered-content !{file.contents}
-    .tab-pane#commits
-      h2 Commits
-      ul.nav.nav-list
-        each commit in file.commits
-          include partials/commit-row
+    .tab-content
+      .tab-pane.active#raw
+        pre #{file.raw}
+      .tab-pane#rendered
+        .rendered-content !{file.contents}
+      .tab-pane#commits
+        h2 Commits
+        ul.nav.nav-list
+          each commit in file.commits
+            include partials/commit-row

@@ -59,14 +59,19 @@ module.exports = {
   },
   viewBlob: function(req, res, next) {
     Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
-      if (!project) { return next(); }
+      if (!project) return next(); 
       
-      var repo = git(project.path);
+      var repo = git( project.path );
+      var branch = req.param('branchName') || 'master';
+      var filePath = req.param('filePath') + '/';
 
-      repo.show(req.param('branchName'), req.param('filePath'), function(err, raw){
-        if (err) {console.log(err);}
+      console.log('filePath ' , filePath );
+
+      repo.show( branch , req.param('filePath') , function(err, raw) {
+        if (err) { console.log(err); }
+
         var contents = raw;
-        var type = mime.lookup( req.param('filePath') );
+        var type = mime.lookup( req.param('filePath')  );
 
         // TODO: build a better handler
         switch (type) {
@@ -78,30 +83,40 @@ module.exports = {
           break;
         }
 
-        repo.logFilePretty(req.param('filePath'), 0, function(err, commits) {
-          if (err) { console.log(err);}
-          return res.render('file', {
-            project: project,
-            file: {
-                name: req.param('filePath')
-              , type: type
-              , contents: contents
-              , raw: raw
-              , commits: commits
-            }
-          });
+        repo.lsTree( branch , filePath , function(err, tree) {
+          repo.prepareTreeView( tree , function( err , treeView ) {
+            var files = treeView;
 
-          res.provide( err , {
-            project: project,
-            file: {
-                name: req.param('filePath')
-              , type: type
-              , contents: contents
-              , raw: raw
-              , commits: commits
-            }
-          } , {
-            template: 'file'
+            repo.logFilePretty( filePath , 0, function(err, commits) {
+              if (err) { console.log(err); }
+
+              return res.render('file', {
+                project: project,
+                branch: branch,
+                filePath: filePath,
+                files: files,
+                file: {
+                    name: filePath
+                  , type: type
+                  , contents: contents
+                  , raw: raw
+                  , commits: commits
+                }
+              });
+
+              res.provide( err , {
+                project: project,
+                file: {
+                    name: req.param('filePath')
+                  , type: type
+                  , contents: contents
+                  , raw: raw
+                  , commits: commits
+                }
+              } , {
+                template: 'file'
+              });
+            });
           });
         });
       });
@@ -149,9 +164,8 @@ module.exports = {
         var flags = {};
         
         async.waterfall([
-        
           function(next) {
-
+            
             switch (project._owner.type) {
               case 'Account':      context = Account;      break;
               case 'Organization': context = Organization; break;
@@ -203,7 +217,7 @@ module.exports = {
 
               // by checking our list of branches, we prevent remote code execs
               if (branches.indexOf(branch) === -1) {
-                return next("Invalid branch");
+                return next('Invalid branch');
               }
               next(err);
             });
@@ -211,42 +225,11 @@ module.exports = {
           function(next) {
             // browse the tree at the specific "branch" (can be a real branch,
             // OR it can be a commit sha )
-            repo.lsTree(branch, next);
-          },
-          function(tree, next) {
-            // asynchronously collect the latest commit for each known file
-            // in the current view
-            async.map( tree , function( blob , cb ) {
-
-              // get the latest commit (and its author, timestamp, and
-              // message) from the git log
-              repo.logFilePretty(blob.name, 1, function(err, commit) {
-                blob.commit = commit[0];
-                blob.commit.message = (commit[0].message.length > 50) ? commit[0].message.slice(0, 50) + '…' : commit[0].message;
-                cb(err , blob);
+            repo.lsTree( branch , function(err, tree) {
+              repo.prepareTreeView( tree , function( err , treeView ) {
+                files = treeView;
+                next( err );
               });
-            }, function(err, completedTree) {
-
-              function compareByName(a, b) {
-                if (a.name < b.name) return -1;
-                if (a.name > b.name) return 1;
-                return 0;
-              }
-
-              function compareByType(a, b) {
-                if (a.type === 'tree') return -1;
-                if (a.type === 'blob') return 1;
-                return 0;
-              }
-
-              // sort by name first
-              completedTree.sort(function (a, b) {
-                if (a.type === b.type) return compareByName(a, b);
-                return compareByType(a, b);
-              });
-              files = completedTree;
-              
-              next(err);
             });
           },
           function(next) {

@@ -106,21 +106,8 @@ block content
 
           .tab-pane.active#code
             h2 Code
-            table.table
-              each file in files
-                tr
-                  td
-                    a(href="/#{project._owner.slug}/#{project.slug}/blobs/#{branch}/#{file.name}")
-                      if (file.type === 'tree')
-                        i.fa.fa-folder
-                      else
-                        i.fa.fa-file-o
-                      |  #{file.name}
-                  td
-                    a(href="/#{project._owner.slug}/#{project.slug}/commits/#{file.commit.commit}") #{file.commit.message}
-                  td
-                    a(href="/#{project._owner.slug}/#{project.slug}/commits/#{file.commit.commit}") #{moment(file.commit.date).fromNow()}
-
+            include partials/tree 
+            
             .panel.panel-default
               .panel-heading
                 h3.panel-title

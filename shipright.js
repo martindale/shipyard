@@ -303,7 +303,7 @@ app.get('/:actorSlug/:projectSlug/diffs/:fromBranch%E2%80%A6:upstreamActorSlug/:
 app.post('/:actorSlug/:projectSlug/issues/:issueID/comments', client.can('view') , setupRepo, issues.addComment );
 
 //app.get('/:actorSlug/:projectSlug.git/info/refs',                setupRepo , projects.git.refs );
-app.get('/:actorSlug/:projectSlug/blobs/:branchName/:filePath',  setupRepo , projects.viewBlob );
+app.get('/:actorSlug/:projectSlug/blobs/:branchName/:filePath(*)',  setupRepo , projects.viewBlob );
 app.get('/:actorSlug/:projectSlug/commits/:commitID',            setupRepo , projects.viewCommit );
 
 app.get('/people', people.list);
