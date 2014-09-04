@@ -222,7 +222,7 @@ function setupRepo(req, res, next) {
 function setupPushover(req, res, next) {
   req.pause();
   Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
-    if (err) { console.log(err); }
+    if (err) { debug.http(err); }
     if (!project) { return next(); }
 
     req.projectID = project._id.toString();
@@ -230,7 +230,6 @@ function setupPushover(req, res, next) {
     next();
   });
 }
-
 
 var pushover = require('./lib/pushover');
 app.repos = pushover( config.git.data.path );
@@ -342,6 +341,9 @@ app.get('/people', people.list);
 
 app.get('/:organizationSlug', organizations.view );
 app.get('/:usernameSlug',     people.view );
+
+app.post('/:usernameSlug/emails', requireLogin , people.addEmail );
+app.delete('/:usernameSlug/emails', requireLogin , people.removeEmail );
 
 app.get('*', function(req, res) {
   res.status(404).render('404');

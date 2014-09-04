@@ -29,6 +29,19 @@ AccountSchema.plugin( slug( 'username' , {
   required: true
 }) );
 
+AccountSchema.virtual('images').get(function() {
+  
+  return this.emails.map(function(email) {
+    var hash = crypto.createHash('md5').update( email ).digest('hex');
+    return {
+      address: email,
+      image: 'https://secure.gravatar.com/avatar/' + hash + '?s=20'
+    }
+  });
+
+  return config.git.data.path + '/' + this._id;
+});
+
 AccountSchema.statics.lookup = function( string , cb ) {
   var emails = string.match(/\<(.*)\>$/);
   Account.findOne({
