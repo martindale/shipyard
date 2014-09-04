@@ -1,7 +1,6 @@
 var fs = require('fs');
 var exec = require('child_process').exec;
 var mime = require('mime');
-var git = require('../../lib/gitty');
 
 function cleanGitLog(x) {
   var parts = x.split(/\s/);
