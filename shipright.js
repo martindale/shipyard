@@ -34,11 +34,11 @@ var client = new RoleProvider({
   }
 });
 client.use('git push', function(req, action) {
-  
-  console.log('project' , req.project)
-  console.log('user' , req.user)
-  
   if (!req.project) return false;
+  
+  // temporary
+  return true;
+  
   if (!req.user) return false;
   if (req.user._actor.toString() === project._actor.toString()) return true;
 });
