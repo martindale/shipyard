@@ -59,6 +59,17 @@ block content
               pre.bash
                 | git push origin master
             
+            hr
+                
+            h4 Already have code?
+            p
+              strong Add #{config.service.name} as a remote:
+              pre.bash
+                | git remote add origin http://#{config.http.host}:#{config.http.port}/#{project._owner.slug}/#{project.slug}
+              strong Synchronize entire repo:
+              pre.bash
+                | git push --all origin
+            
       else
         p
           - var commit = commits[0]
