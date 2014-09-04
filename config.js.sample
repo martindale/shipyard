@@ -19,4 +19,8 @@ module.exports = {
         path: 'data' // can, and should, be a resilient fs
       }
     }
+  , redis: {
+      host: 'localhost',
+      port: 6379
+    }
 };

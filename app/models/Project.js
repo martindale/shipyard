@@ -2,6 +2,10 @@ var mongoose = require('mongoose')
   , Schema = mongoose.Schema
   , ObjectId = mongoose.SchemaTypes.ObjectId
   , slug = require('mongoose-slug');
+  
+var notifications = require('maki-mongoose-hooks');
+var redis = require('redis');
+var client = redis.createClient();
 
 // this defines the fields associated with the model,
 // and moreover, their type.
@@ -18,6 +22,19 @@ var ProjectSchema = new Schema({
 ProjectSchema.plugin( slug( 'name' , {
   required: true
 }) );
+
+// TODO: make maki-mongoose-hooks more extensible,
+// i.e., without these stubs
+ProjectSchema.plugin( notifications , {
+  maki: {
+    redis: client
+  },
+  resource: {
+    routes: {
+      query: '/projects'
+    }
+  }
+});
 
 ProjectSchema.virtual('path').get(function() {
   return config.git.data.path + '/' + this._id;
