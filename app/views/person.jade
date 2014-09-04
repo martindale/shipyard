@@ -10,9 +10,10 @@ block content
     each googleProfile in person.profiles.google
       i.fa.fa-google-plus
     else
-      a.btn.btn-default(href="/auth/google")
-        i.fa.fa-google-plus
-        |  Add Google Profile &raquo;
+      if (person._id.toString() === user._id.toString())
+        a.btn.btn-default(href="/auth/google")
+          i.fa.fa-google-plus
+          |  Add Google Profile &raquo;
 
   h2 
     i.fa.fa-flask

@@ -18,8 +18,6 @@
     "body-parser": "~1.0.2",
     "connect-redis": "~1.4.7",
     "cookie-parser": "~1.0.1",
-    "debug": "^2.0.0",
-    "debug-trace": "^0.2.3",
     "express": "~3.5.2",
     "express-session": "~1.2.1",
     "flashify": "~0.1.2",
@@ -42,6 +40,8 @@
     "underscore": "~1.6.0"
   },
   "devDependencies": {
+    "debug": "^2.0.0",
+    "debug-trace": "^0.2.3",
     "mocha": "^1.21.4"
   }
 }

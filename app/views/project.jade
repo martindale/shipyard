@@ -35,13 +35,11 @@ block content
         ul.dropdown-menu(role="menu")
           each availableBranch in branches
             li(class=((branch == availableBranch) ? 'active' : undefined))
-              a(href="/#{project._owner.slug}/#{project.slug}/tree/#{availableBranch}") #{availableBranch}
+              a(href="/#{project._owner.slug}/#{project.slug}/trees/#{availableBranch}") #{availableBranch}
       
       p
         - var commit = commits[0]
         include partials/commit-row
-
-      hr
 
       ul.nav.nav-tabs.tabs-right#project-tabs
         li.active
@@ -129,9 +127,7 @@ block content
           a(href="#code", data-toggle="tab")
             i.fa.fa-code
             |  Code
-    
-    
-    
+
   form.modal.fade#modal-fork(action="/projects", method="post")
     input(type="hidden", name="fromProjectID", value="#{project._id}")
 

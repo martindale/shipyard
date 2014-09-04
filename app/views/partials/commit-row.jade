@@ -1,11 +1,11 @@
 li.list-group-item
   .pull-right
     .btn-group
-      a.btn.btn-default(href="/#{project._owner.slug}/#{project.slug}/commit/#{commit.commit}")
+      a.btn.btn-default(href="/#{project._owner.slug}/#{project.slug}/trees/#{commit.commit}", title="Browse code at commit #{commit.commit}")
         i.fa.fa-code
-      a.btn.btn-default(href="/#{project._owner.slug}/#{project.slug}/commit/#{commit.commit}") #{commit.commit.substring(0, 7)}
+      a.btn.btn-default(href="/#{project._owner.slug}/#{project.slug}/commits/#{commit.commit}") #{commit.commit.substring(0, 7)}
   p
-    a(href="/#{project._owner.slug}/#{project.slug}/commit/#{commit.commit}")
+    a(href="/#{project._owner.slug}/#{project.slug}/commits/#{commit.commit}")
       strong #{commit.message}
   p
     if commit._author

@@ -323,7 +323,7 @@ app.get('/projects/new', requireLogin ,       projects.createForm );
 app.post('/projects',    requireLogin ,       projects.create );
 
 app.get('/:actorSlug/:projectSlug',                                 setupRepo, projects.view );
-app.get('/:actorSlug/:projectSlug/trees/:branchName',                setupRepo, projects.view );
+app.get('/:actorSlug/:projectSlug/trees/:branchName',               setupRepo, projects.view );
 app.get('/:actorSlug/:projectSlug/issues',                          setupRepo, issues.list );
 app.get('/:actorSlug/:projectSlug/issues/:issueID',                 setupRepo, issues.view );
 app.get('/:actorSlug/:projectSlug/issues/new',                      setupRepo, issues.createForm );

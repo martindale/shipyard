@@ -11,7 +11,6 @@ module.exports = {
       if (err) { console.log(err); }
       if (!person) { return next(); }
 
-      console.log(person);
       Project.find({ _owner: person._actor }).lean().exec(function(err, projects) {
 
         projects = projects.map(function(x) {
