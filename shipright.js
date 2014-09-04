@@ -23,7 +23,7 @@ var RoleProvider = require('connect-roles');
 var client = new RoleProvider({
   failureHandler: function(req, res, action) {
     res.status(403);
-    req.format({
+    res.format({
       json: function() {
         res.send({ status: error , message: 'Access denied '});
       },
@@ -34,6 +34,10 @@ var client = new RoleProvider({
   }
 });
 client.use('git push', function(req, action) {
+  
+  console.log('project' , req.project)
+  console.log('user' , req.user)
+  
   if (!req.project) return false;
   if (!req.user) return false;
   if (req.user._actor.toString() === project._actor.toString()) return true;
@@ -168,9 +172,7 @@ passport.use(new GoogleStrategy({
         ]
     }).exec(function(err, account) {
       if (err) { return done(err); }
-      if (!account) {
-        var account = new Account();
-      }
+      if (!account) var account = new Account();
 
       if (account.profiles.google.map(function(x) { return x.id; }).indexOf( identifier ) < 0) {
         account.profiles.google.push({
@@ -225,61 +227,6 @@ app.use(function(req, res, next) {
   };
 
   next();
-});
-
-function requireLogin(req, res, next) {
-  if (req.user) { return next(); }
-  // require the user to log in
-  res.status(401).render('login', {
-    next: req.path
-  });
-}
-
-function setupRepo(req, res, next) {
-  req.params.projectSlug = req.params.projectSlug.replace('.git', '');
-  req.params.uniqueSlug = req.param('actorSlug') + '/' + req.param('projectSlug');
-  next();
-}
-
-function setupPushover(req, res, next) {
-  req.pause();
-  Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
-    if (err) { debug.http(err); }
-    if (!project) { return next(); }
-
-    req.projectID = project._id.toString();
-    req.project = project;
-    
-    req.resume();
-    next();
-  });
-}
-
-var pushover = require('./lib/pushover');
-app.repos = pushover( config.git.data.path );
-
-app.repos.on('push', function (push) {
-  debug.git('push ' + push.repo + '/' + push.commit
-      + ' (' + push.branch + ')'
-  );
-  push.accept();
-});
-app.repos.on('fetch', function (fetch) {
-  debug.git('fetch ' + fetch.commit);
-  fetch.accept();
-});
-
-var gitAcceptRegex = new RegExp('^application/x-git(.*)');
-var gitAgentRegex = new RegExp('^git/(.*)');
-app.get('/:actorSlug/:projectSlug*', setupRepo , setupPushover , function(req, res, next) {
-  if (!gitAgentRegex.exec( req.headers['user-agent'] ) ) return next();
-  debug.git('handling get...');
-  app.repos.handle(req, res);
-});
-app.post('/:actorSlug/:projectSlug*', setupRepo , setupPushover , client.can('git push') , function(req, res, next) {
-  if (!gitAcceptRegex.exec( req.headers.accept ) ) return next();
-  debug.git('handling post...');
-  app.repos.handle(req, res);
 });
 
 app.get('/', pages.index );
@@ -340,22 +287,22 @@ app.get('/logout', function(req, res, next) {
 });
 
 app.get('/projects',                          projects.list );
-app.get('/projects/new', requireLogin ,       projects.createForm );
-app.post('/projects',    requireLogin ,       projects.create );
+app.get('/projects/new', client.can('view') , projects.createForm );
+app.post('/projects',    client.can('view') , projects.create );
 
-app.get('/:actorSlug/:projectSlug',                                 setupRepo, projects.view );
-app.get('/:actorSlug/:projectSlug/trees/:branchName',               setupRepo, projects.view );
-app.get('/:actorSlug/:projectSlug/issues',                          setupRepo, issues.list );
-app.get('/:actorSlug/:projectSlug/issues/:issueID',                 setupRepo, issues.view );
-app.get('/:actorSlug/:projectSlug/issues/new',                      setupRepo, issues.createForm );
-app.post('/:actorSlug/:projectSlug/issues',          requireLogin , setupRepo, issues.create );
+app.get('/:actorSlug/:projectSlug',                              setupRepo, projects.view );
+app.get('/:actorSlug/:projectSlug/trees/:branchName',            setupRepo, projects.view );
+app.get('/:actorSlug/:projectSlug/issues',                       setupRepo, issues.list );
+app.get('/:actorSlug/:projectSlug/issues/:issueID',              setupRepo, issues.view );
+app.get('/:actorSlug/:projectSlug/issues/new',                   setupRepo, issues.createForm );
+app.post('/:actorSlug/:projectSlug/issues', client.can('view') , setupRepo, issues.create );
 
-app.get('/:actorSlug/:projectSlug/diffs',                           setupRepo, issues.createForm );
+app.get('/:actorSlug/:projectSlug/diffs',                        setupRepo, issues.createForm );
 app.get('/:actorSlug/:projectSlug/diffs/:fromBranch%E2%80%A6:upstreamActorSlug/:upstreamProjectSlug', setupRepo, issues.createForm );;
 
-app.post('/:actorSlug/:projectSlug/issues/:issueID/comments', requireLogin , setupRepo, issues.addComment );
+app.post('/:actorSlug/:projectSlug/issues/:issueID/comments', client.can('view') , setupRepo, issues.addComment );
 
-//app.get('/:actorSlug/:projectSlug.git/info/refs',               setupRepo , projects.git.refs );
+//app.get('/:actorSlug/:projectSlug.git/info/refs',                setupRepo , projects.git.refs );
 app.get('/:actorSlug/:projectSlug/blobs/:branchName/:filePath',  setupRepo , projects.viewBlob );
 app.get('/:actorSlug/:projectSlug/commits/:commitID',            setupRepo , projects.viewCommit );
 
@@ -364,8 +311,55 @@ app.get('/people', people.list);
 app.get('/:organizationSlug', organizations.view );
 app.get('/:usernameSlug',     people.view );
 
-app.post('/:usernameSlug/emails', requireLogin , people.addEmail );
-app.delete('/:usernameSlug/emails', requireLogin , people.removeEmail );
+app.post('/:usernameSlug/emails', client.can('view') , people.addEmail );
+app.delete('/:usernameSlug/emails', client.can('view') , people.removeEmail );
+
+function setupRepo(req, res, next) {
+  req.params.projectSlug = req.params.projectSlug.replace('.git', '');
+  req.params.uniqueSlug = req.param('actorSlug') + '/' + req.param('projectSlug');
+  next();
+}
+
+function setupPushover(req, res, next) {
+  req.pause();
+  Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
+    if (err) { debug.http(err); }
+    if (!project) { return next(); }
+
+    req.projectID = project._id.toString();
+    req.project = project;
+    
+    req.resume();
+    next();
+  });
+}
+
+var pushover = require('./lib/pushover');
+app.repos = pushover( config.git.data.path );
+
+app.repos.on('push', function (push) {
+  debug.git('push ' + push.repo + '/' + push.commit
+      + ' (' + push.branch + ')'
+  );
+  push.accept();
+});
+app.repos.on('fetch', function (fetch) {
+  debug.git('fetch ' + fetch.commit);
+  fetch.accept();
+});
+
+var gitAcceptRegex = new RegExp('^application/x-git(.*)');
+var gitAgentRegex = new RegExp('^git/(.*)');
+app.get('/:actorSlug/:projectSlug*', setupRepo , setupPushover , function(req, res, next) {
+  if (!gitAgentRegex.exec( req.headers['user-agent'] ) ) return next();
+  debug.git('handling get...');
+  app.repos.handle(req, res);
+});
+app.post('/:actorSlug/:projectSlug*', setupRepo , setupPushover , client.can('git push') , function(req, res, next) {
+  if (!gitAcceptRegex.exec( req.headers.accept ) ) return next();
+  debug.git('handling post...');
+  app.repos.handle(req, res);
+});
 
 app.get('*', function(req, res) {
   res.status(404).render('404');

@@ -12,12 +12,11 @@ block content
 
       .profiles
         each googleProfile in person.profiles.google
-          i.fa.fa-google-plus
-        else
-          if (user && person._id.toString() === user._id.toString())
-            a.btn.btn-default(href="/auth/google")
-              i.fa.fa-google-plus
-              |  Add Google Profile &raquo;
+          i.fa.fa-google-plus(title="#{googleProfile.id}")
+        if (user && person._id.toString() === user._id.toString())
+          a.btn.btn-default(href="/auth/google")
+            i.fa.fa-google-plus
+            |  Add Google Profile &raquo;
       
       if (user && person._id.toString() === user._id.toString())
         h4 Emails (only visible to you)
