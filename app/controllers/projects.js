@@ -49,15 +49,18 @@ module.exports = {
           var commit = commits[0];
           commit.diff = html;
           
-          return res.render('commit', {
-            commit: commit,
-            project: project
-          })
-          
-          res.provide(err , {
-            commit: commit
-          }, {
-            template: 'commit'
+          Account.lookup( commit.author , function(err, author) {
+            commit._author = author;
+            return res.render('commit', {
+              commit: commit,
+              project: project
+            })
+            
+            res.provide(err , {
+              commit: commit
+            }, {
+              template: 'commit'
+            });
           });
         });
       } );
