@@ -106,9 +106,9 @@ block content
                         i.fa.fa-file-o
                       |  #{file.name}
                   td
-                    a(href="/#{project._owner.slug}/#{project.slug}/commits/#{file.commit.sha}") #{file.commit.message}
+                    a(href="/#{project._owner.slug}/#{project.slug}/commits/#{file.commit.commit}") #{file.commit.message}
                   td
-                    a(href="/#{project._owner.slug}/#{project.slug}/commits/#{file.commit.sha}") #{moment(file.commit.date).fromNow()}
+                    a(href="/#{project._owner.slug}/#{project.slug}/commits/#{file.commit.commit}") #{moment(file.commit.date).fromNow()}
 
             .panel.panel-default
               .panel-heading
