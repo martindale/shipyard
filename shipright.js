@@ -33,6 +33,11 @@ var client = new RoleProvider({
     });
   }
 });
+client.use('view', function(req, action) {
+  if (!req.user) return false;
+  
+  return true;
+});
 client.use('git push', function(req, action) {
   if (!req.project) return false;
   
@@ -291,14 +296,14 @@ app.get('/projects/new', client.can('view') , projects.createForm );
 app.post('/projects',    client.can('view') , projects.create );
 
 app.get('/:actorSlug/:projectSlug',                              setupRepo, projects.view );
-app.get('/:actorSlug/:projectSlug/trees/:branchName',            setupRepo, projects.view );
+app.get('/:actorSlug/:projectSlug/trees/:branchName(*)',            setupRepo, projects.view );
 app.get('/:actorSlug/:projectSlug/issues',                       setupRepo, issues.list );
 app.get('/:actorSlug/:projectSlug/issues/:issueID',              setupRepo, issues.view );
 app.get('/:actorSlug/:projectSlug/issues/new',                   setupRepo, issues.createForm );
 app.post('/:actorSlug/:projectSlug/issues', client.can('view') , setupRepo, issues.create );
 
 app.get('/:actorSlug/:projectSlug/diffs',                        setupRepo, issues.createForm );
-app.get('/:actorSlug/:projectSlug/diffs/:fromBranch%E2%80%A6:upstreamActorSlug/:upstreamProjectSlug', setupRepo, issues.createForm );;
+app.get('/:actorSlug/:projectSlug/diffs/:fromBranch%E2%80%A6:upstreamProjectSlug(*)?', setupRepo, issues.createForm );;
 
 app.post('/:actorSlug/:projectSlug/issues/:issueID/comments', client.can('view') , setupRepo, issues.addComment );
 

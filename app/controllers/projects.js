@@ -81,13 +81,14 @@ module.exports = {
             rendered = true;
           break;
           case 'application/javascript':
+          case 'application/json':
             contents = req.app.locals.marked('```js\n' + contents + '```');
             rendered = true;
           break;
         }
 
         repo.lsTree( branch , filePath , function(err, tree) {
-          repo.prepareTreeView( tree , function( err , treeView ) {
+          repo.prepareTreeView( tree , branch , function( err , treeView ) {
             var files = treeView;
 
             // note the use of req.param('filePath') here
@@ -242,7 +243,7 @@ module.exports = {
             // browse the tree at the specific "branch" (can be a real branch,
             // OR it can be a commit sha )
             repo.lsTree( branch , function(err, tree) {
-              repo.prepareTreeView( tree , function( err , treeView ) {
+              repo.prepareTreeView( tree , branch , function( err , treeView ) {
                 files = treeView;
                 next( err );
               });
@@ -341,14 +342,7 @@ module.exports = {
     }
 
     function createProject() {
-      
-      console.log('executing: ', preSaveCommand );
-      console.log('project:' , project );
-      
       exec( preSaveCommand , function(err, stdout) {
-        
-        console.log( err , stdout );
-        
         if (err) return next(err);
         
         project.save(function(err) {
