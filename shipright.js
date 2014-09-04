@@ -347,4 +347,27 @@ app.get('*', function(req, res) {
   res.status(404).render('404');
 });
 
-app.listen( config.http.port );
+var WebSocketServer = require('maki-service-websockets');
+
+// Maki stub
+// TODO: implement proper Maki
+// maki exposes a lot of this automatically...
+// TODO: document using Maki this way
+var maki = {
+  debug: true ,
+  app: app ,
+  routes: {
+    '/projects': 'ff'
+  },
+  config: {
+    redis: config.redis
+  },
+  clients: {},
+  JSONRPC: require('maki-jsonrpc')
+};
+maki.httpd = require('http').createServer( maki.app );
+maki.socks = new WebSocketServer();
+
+maki.socks.bind( maki );
+
+maki.httpd.listen( config.http.port );
