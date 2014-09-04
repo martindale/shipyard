@@ -114,7 +114,6 @@ module.exports = {
   },
   view: function(req, res, next) {
     Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
-      
       if (err) return next( err );
       if (!project) { return next(); }
 
@@ -167,6 +166,25 @@ module.exports = {
             var gitBranches = branchData.split('\n').filter(function(x) {
               return x.length > 0;
             });
+            
+            
+            // TODO: fail far earlier
+            if (gitBranches.length === 0) return res.render('project', {
+              project: project,
+              issues: issues,
+              docks: docks,
+              forks: forks,
+              commits: [],
+              branches: [],
+              files: [],
+              releases: releases,
+              contributors: contributors,
+              flags: {
+                setup: true // require setup from user
+              }
+            });
+            
+            // no failure?  repo is setup?  GO.
             
             // get a clean list of all commits on the current branch
             // these will be added to the branch checker, which is used to
@@ -332,29 +350,37 @@ module.exports = {
     project.description = req.param('description');
     project._creator    = req.user._actor;
     project._owner      = req.user._actor;
-
-    //var path = config.git.data.path + '/' + project._id ;
-    var path = config.git.data.path + '/' + req.param('uniqueSlug') ;
-    var command = '';
+    
+    var preSaveCommand = '';
 
     if (req.param('fromProjectID')) {
       Project.findOne({ _id: req.param('fromProjectID') }).exec(function(err, upstream) {
-        command = 'cp -r ' + config.git.data.path + '/' + upstream._id + ' ' + path;
+        preSaveCommand = 'cp -r ' + upstream.path + ' ' + project.path;
 
         project._upstream = upstream._id;
 
         createProject();
       });
     } else {
-      command = 'mkdir ' + path + ' && cd ' + path + ' && git init && echo "# '+project._id+'" > README.md && git add README.md && git commit -m "Initial commit."';
-      createProject();
+      preSaveCommand = '';
+      
+      req.app.repos.create( project._id.toString() , function( err ) {
+        if (err) return next(err);
+        
+        createProject();
+      } );
     }
 
     function createProject() {
-      // TODO: use job scheduler
       
-      return req.app.repos.create( project._id.toString() , function( err ) {
-        if (err) return next( err );
+      console.log('executing: ', preSaveCommand );
+      console.log('project:' , project );
+      
+      exec( preSaveCommand , function(err, stdout) {
+        
+        console.log( err , stdout );
+        
+        if (err) return next(err);
         
         project.save(function(err) {
           if (err) { console.log(err); }
@@ -367,21 +393,6 @@ module.exports = {
           });
         });
         
-      });
-      
-      exec( command , function(err, stdout, stderr) {
-        if (err) { console.log(err); }
-
-        project.save(function(err) {
-          if (err) { console.log(err); }
-          Actor.populate( project , {
-            path: '_owner'
-          } , function(err, project) {
-            if (err) { console.log(err); }
-
-            res.redirect('/' + project._owner.slug + '/' + project.slug )
-          });
-        });
       });
     }
 
