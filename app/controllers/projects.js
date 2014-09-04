@@ -248,11 +248,13 @@ module.exports = {
                   repo.logFilePrettyFormatted(blob.name, function(err, commit) {
                     var parts = commit.split(' ');
                     
+                    var message = parts.slice( 3 ).join(' ');
+                    
                     blob.commit = {
                       sha: parts[0],
                       author: parts[1],
                       date: (new Date( parts[2] * 1000 )),
-                      message: parts.slice( 3 ).join(' ')
+                      message: (message.length > 50) ? message.slice(0, 50) + '…' : message
                     };
                     
                     cb(err , blob);
