@@ -33,9 +33,8 @@ var client = new RoleProvider({
     });
   }
 });
-client.use('view', function(req, action) {
-  if (!req.user) return false;
-  
+client.use('authenticate', function(req, action) {
+  if (!req.user || !req.user._id) return false;
   return true;
 });
 client.use('git push', function(req, action) {
@@ -292,20 +291,20 @@ app.get('/logout', function(req, res, next) {
 });
 
 app.get('/projects',                          projects.list );
-app.get('/projects/new', client.can('view') , projects.createForm );
-app.post('/projects',    client.can('view') , projects.create );
+app.get('/projects/new', client.can('authenticate') , projects.createForm );
+app.post('/projects',    client.can('authenticate') , projects.create );
 
 app.get('/:actorSlug/:projectSlug',                              setupRepo, projects.view );
 app.get('/:actorSlug/:projectSlug/trees/:branchName(*)',            setupRepo, projects.view );
 app.get('/:actorSlug/:projectSlug/issues',                       setupRepo, issues.list );
 app.get('/:actorSlug/:projectSlug/issues/:issueID',              setupRepo, issues.view );
 app.get('/:actorSlug/:projectSlug/issues/new',                   setupRepo, issues.createForm );
-app.post('/:actorSlug/:projectSlug/issues', client.can('view') , setupRepo, issues.create );
+app.post('/:actorSlug/:projectSlug/issues', client.can('authenticate') , setupRepo, issues.create );
 
 app.get('/:actorSlug/:projectSlug/diffs',                        setupRepo, issues.createForm );
 app.get('/:actorSlug/:projectSlug/diffs/:fromBranch%E2%80%A6:upstreamProjectSlug(*)?', setupRepo, issues.createForm );;
 
-app.post('/:actorSlug/:projectSlug/issues/:issueID/comments', client.can('view') , setupRepo, issues.addComment );
+app.post('/:actorSlug/:projectSlug/issues/:issueID/comments', client.can('authenticate') , setupRepo, issues.addComment );
 
 //app.get('/:actorSlug/:projectSlug.git/info/refs',                setupRepo , projects.git.refs );
 app.get('/:actorSlug/:projectSlug/blobs/:branchName/:filePath(*)',  setupRepo , projects.viewBlob );
@@ -316,8 +315,8 @@ app.get('/people', people.list);
 app.get('/:organizationSlug', organizations.view );
 app.get('/:usernameSlug',     people.view );
 
-app.post('/:usernameSlug/emails', client.can('view') , people.addEmail );
-app.delete('/:usernameSlug/emails', client.can('view') , people.removeEmail );
+app.post('/:usernameSlug/emails', client.can('authenticate') , people.addEmail );
+app.delete('/:usernameSlug/emails', client.can('authenticate') , people.removeEmail );
 
 function setupRepo(req, res, next) {
   req.params.projectSlug = req.params.projectSlug.replace('.git', '');
