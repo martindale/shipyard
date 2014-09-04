@@ -43,14 +43,22 @@ module.exports = {
         
         var diff = require('pretty-diff');
         var html = diff( rawDiff );
-      
-        res.provide(err , {
-          commit: {
-              id: req.param('commitID')
-            , diff: html
-          }
-        }, {
-          template: 'commit'
+        
+        repo.branchLog( req.param('commitID') , function(err, commits) {
+          
+          var commit = commits[0];
+          commit.diff = html;
+          
+          return res.render('commit', {
+            commit: commit,
+            project: project
+          })
+          
+          res.provide(err , {
+            commit: commit
+          }, {
+            template: 'commit'
+          });
         });
       } );
     });
@@ -266,7 +274,7 @@ module.exports = {
                   });
 
                   // collect the README file if it exists
-                  repo.show(branch, "README.md", function(err, readme){
+                  repo.show(branch, 'README.md', function(err, readme){
                     if (readme) {
                       project.readme = req.app.locals.marked(readme);
                     }
@@ -276,14 +284,19 @@ module.exports = {
                     repo.shortBranches(function(err, branchData) {
                       var branches = branchData.split('\n').map(function(x) {
                         return x.trim();
+                      }).filter(function(x) {
+                        return x.length;
                       }).sort(function(a, b) {
                         if (a === 'master') return -1;
                         return a - b;
                       });
                       
+                      branches.push( branch );
+                      branches = _.uniq( branches );
+                      
                       // TODO: eliminate double calls
                       // get the log of commits on this current branch / commit
-                      repo.branchLog(branch, function(err, commits) {
+                      repo.branchLog( branch , function(err, commits) {
                         
                         // find a corresponding User based on the commit email
                         async.map( commits , function( commit , done ) {
@@ -292,6 +305,9 @@ module.exports = {
                             done( err , commit );
                           });
                         }, function(err, commits) {
+                          
+                          branches.push( branch );
+                          branches = _.uniq( branches );
 
                           return res.render('project', {
                               project: project
