@@ -1,3 +1,7 @@
+if (original)
+  h5 Fr: #{project._id}
+  h5 To: #{upstream._id}
+
 form(action="/#{project._owner.slug}/#{project.slug}/issues", method="post")
   .form-group
     label(for="name") Name

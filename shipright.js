@@ -329,6 +329,9 @@ app.get('/:actorSlug/:projectSlug/issues/:issueID',                 setupRepo, i
 app.get('/:actorSlug/:projectSlug/issues/new',                      setupRepo, issues.createForm );
 app.post('/:actorSlug/:projectSlug/issues',          requireLogin , setupRepo, issues.create );
 
+app.get('/:actorSlug/:projectSlug/diffs',                           setupRepo, issues.createForm );
+app.get('/:actorSlug/:projectSlug/diffs/:fromBranch%E2%80%A6:upstreamActorSlug/:upstreamProjectSlug', setupRepo, issues.createForm );;
+
 app.post('/:actorSlug/:projectSlug/issues/:issueID/comments', requireLogin , setupRepo, issues.addComment );
 
 //app.get('/:actorSlug/:projectSlug.git/info/refs',               setupRepo , projects.git.refs );

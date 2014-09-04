@@ -1,6 +1,12 @@
 extends layout
 
 block content
-  h1 Create New Issue
 
-  include forms/issue-new
+  h1 Create New Issue
+  
+  if (upstream)
+    - project = upstream
+
+    include forms/issue-new
+  else
+    include forms/issue-new
