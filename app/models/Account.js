@@ -52,17 +52,26 @@ AccountSchema.statics.lookup = function( string , cb ) {
   }).exec( cb );
 }
 
+AccountSchema.post('init', function() {
+  if (!this.image || !this.image.url) this.save();
+});
+
 AccountSchema.pre('save', function(next) {
   var self = this;
 
   if (!this.image || !this.image.url || this.image.url == '/img/user-avatar.png' || (this.image.url.match('gravatar.com') && this.email)) {
     this.image = undefined; // delete element to let mongoose handle it...
     this.save(); // save now.
+    
+    var email = self.email;
+    if (!email && self.emails.length) email = self.emails[ 0 ];
+    if (!email) email = 'test@test.com';
+    email = email.toLowerCase();
 
-    var hash = crypto.createHash('md5').update( (self.email) ? self.email.toLowerCase() : 'test@test.com' ).digest("hex");
+    var hash = crypto.createHash('md5').update( email ).digest("hex");
     this.image = {
-        url: 'https://secure.gravatar.com/avatar/' + hash + '?s=260&d=' + encodeURIComponent( 'http://coursefork.org/img/user-avatar.png' )
-      , small: 'https://secure.gravatar.com/avatar/' + hash + '?d=' + encodeURIComponent( 'http://coursefork.org/img/user-avatar.png' )
+        url: 'https://secure.gravatar.com/avatar/' + hash + '?s=300'
+      , small: 'https://secure.gravatar.com/avatar/' + hash
     }
   }
 

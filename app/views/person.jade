@@ -3,9 +3,10 @@ extends layout
 block content
 
   .row
-    .col-md-4
+    .col-md-3
+      img.img-rounded.img-responsive(src="#{person.image.url}")
       h1
-        include partials/person
+        a(href="/#{person.slug}") #{person.username}
       h2
         small a craftsman of code
 
@@ -38,7 +39,7 @@ block content
                 .input-group-btn
                   button.btn.btn-default(type="submit") Add &raquo;
 
-    .col-md-8
+    .col-md-9
       h2 
         i.fa.fa-flask
         |  Projects
