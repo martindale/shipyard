@@ -1,18 +1,19 @@
 mixin commentForm(action)
   include forms/add-comment
 
-!!! 5
+doctype html
 html
   head
-    title shipright
+    block header
+      title shipright
 
-    link(rel="stylesheet", href="/css/bootstrap.css")
-    link(rel="stylesheet", href="/css/fontawesome/font-awesome.css")
-    link(rel="stylesheet", href="/css/maki.css")
+      link(rel="stylesheet", href="/css/bootstrap.css")
+      link(rel="stylesheet", href="/css/fontawesome/font-awesome.css")
+      link(rel="stylesheet", href="/css/maki.css")
 
-    script(src="/js/jquery.js")
-    script(src="/js/bootstrap.min.js")
-    script(src="/js/maki.js")
+      script(src="/js/jquery.js")
+      script(src="/js/bootstrap.min.js")
+      script(src="/js/maki.js")
 
   body
     .navbar.navbar-default.navbar-fixed-top
@@ -23,20 +24,22 @@ html
             span.icon-bar
             span.icon-bar
             span.icon-bar
-          a.navbar-brand(href="/") shipright
+          a.navbar-brand(href="/")
+            i.fa.fa-anchor
+            |  shipright
         .navbar-collapse.collapse
           ul.nav.navbar-nav
             li.active
               a(href="/", title="ship more.")
-                i.glyphicon.glyphicon-home
+                i.fa.fa-home
                 |  Home
             li
               a(href="/projects", title="Projects")
-                i.glyphicon.glyphicon-leaf
+                i.fa.fa-flask
                 |  Projects
             li
               a(href="/people", title="People")
-                i.glyphicon.glyphicon-user
+                i.fa.fa-user
                 |  People
             if (!user)
               li

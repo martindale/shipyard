@@ -10,12 +10,15 @@ block content
     each googleProfile in person.profiles.google
       i.fa.fa-google-plus
     else
-      a.btn.btn-default(href="/auth/google")
-        i.fa.fa-google-plus
-        |  Add Google Profile &raquo;
+      if (person._id.toString() === user._id.toString())
+        a.btn.btn-default(href="/auth/google")
+          i.fa.fa-google-plus
+          |  Add Google Profile &raquo;
 
-  h2 Projects
-  ul.nav.nav-list
+  h2 
+    i.fa.fa-flask
+    |  Projects
+  ul.list-group
     each project in projects
-      li
+      li.list-group-item
         include partials/project
