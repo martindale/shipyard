@@ -161,12 +161,7 @@ module.exports = {
           if (err) { console.log(err); }
 
           project._owner = owner;
-          //project.path = config.git.data.path + '/' + project._id; // remove with lean()
-          project.path = config.git.data.path + '/' + req.param('uniqueSlug') + '.git'; // remove with lean()
-
-          //var repo = git( config.git.data.path + '/' + project._id );
-
-          console.log('project path ' , project.path );
+          project.path = config.git.data.path + '/' + project._id; // remove with lean()
 
           var branch = req.param('branchName') || 'master';
           

@@ -1,4 +1,10 @@
-require('debug-trace')({ always: true })
+//'use strict'
+// TODO: evaluate strict mode
+require('debug-trace')({ always: process.env.SHIPRIGHT_TRACE });
+debug = {
+  http: require('debug')('http'),
+  git: require('debug')('git')
+};
 
 var fs = require('fs');
 
@@ -105,7 +111,7 @@ app.locals.marked = function( inputString , context ) {
 };
 
 app.use(require('less-middleware')({ 
-    debug: true
+    debug: false
   , src: __dirname + '/private'
   , dest: __dirname + '/public'
 }));
@@ -131,6 +137,7 @@ app.use(passport.session());
 app.set('view engine', 'jade');
 app.set('views', 'app/views');
 
+// TODO: utilize confluence, sensemaker
 passport.use(new LocalStrategy( Account.authenticate() ) );
 passport.use(new GoogleStrategy({
     returnURL: 'http://eric.bp:9200/auth/google/callback',
@@ -174,7 +181,7 @@ app.use(function(req, res, next) {
   res.locals.user = req.user;
   res.locals.next = req.path;
 
-  console.log(req.method + ' ' + req.path);
+  debug.http(req.method + ' ' + req.path);
 
   // TODO: consider moving to a prototype on the response
   res.provide = function(err, resource, options) {
@@ -207,20 +214,12 @@ function requireLogin(req, res, next) {
 }
 
 function setupRepo(req, res, next) {
-  req.pause();
   req.params.projectSlug = req.params.projectSlug.replace('.git', '');
   req.params.uniqueSlug = req.param('actorSlug') + '/' + req.param('projectSlug');
-
-  console.log('sup dawg', req.param('uniqueSlug'));
-
-  req.resume();
   next();
 }
 
 function setupPushover(req, res, next) {
-  
-  console.log('SETUP PUSHOVER');
-  
   req.pause();
   Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
     if (err) { console.log(err); }
@@ -237,38 +236,26 @@ var pushover = require('./lib/pushover');
 app.repos = pushover( config.git.data.path );
 
 app.repos.on('push', function (push) {
-  console.log('push ' + push.repo + '/' + push.commit
+  debug.git('push ' + push.repo + '/' + push.commit
       + ' (' + push.branch + ')'
   );
   push.accept();
 });
 app.repos.on('fetch', function (fetch) {
-  console.log('fetch ' + fetch.commit);
+  debug.git('fetch ' + fetch.commit);
   fetch.accept();
 });
 
 var gitAcceptRegex = new RegExp('^application/x-git(.*)');
 var gitAgentRegex = new RegExp('^git/(.*)');
 app.get('/:actorSlug/:projectSlug*', setupRepo , setupPushover , function(req, res, next) {
-  
-  console.log(req.headers);
-  
-  console.log('REQ PATH', req.path );
-  console.log('REQ ACCEPT', req.headers.accept );
-  
   if (!gitAgentRegex.exec( req.headers['user-agent'] ) ) return next();
-  console.log('handling get....');
+  debug.git('handling get...');
   app.repos.handle(req, res);
 });
 app.post('/:actorSlug/:projectSlug*', setupRepo , setupPushover , function(req, res, next) {
-  
-  console.log(req.headers);
-  
-  console.log('REQ PATH', req.path );
-  console.log('REQ ACCEPT', req.headers.accept );
-  
   if (!gitAcceptRegex.exec( req.headers.accept ) ) return next();
-  console.log('handling post....');
+  debug.git('handling post...');
   app.repos.handle(req, res);
 });
 
