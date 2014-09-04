@@ -4,7 +4,10 @@
    which sets them when require('./thisfile') is run. */
 
 module.exports = {
-    http: {
+    service: {
+      name: process.env.SHIPRIGHT_SERVICE_NAME || 'shipright'
+    }
+  , http: {
       port: process.env.SHIPRIGHT_HTTP_PORT || 9200,
       host: process.env.SHIPRIGHT_HTTP_HOST || 'localhost'
     }
@@ -15,5 +18,9 @@ module.exports = {
       data: {
         path: 'data' // can, and should, be a resilient fs
       }
+    }
+  , redis: {
+      host: 'localhost',
+      port: 6379
     }
 };

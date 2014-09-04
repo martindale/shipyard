@@ -56,11 +56,28 @@ module.exports = {
   },
   createForm: function(req, res, next) {
     Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
-      if (!project) { return next(); }
-
-      res.render('issue-new', {
-        project: project
+      if (!project) return next();
+      
+      req.params.upstreamUniqueSlug = req.param('upstreamActorSlug') + '/' + req.param('upstreamProjectSlug');
+      console.log( req.param('upstreamUniqueSlug') )
+      
+      var collectors = [
+        function(done) {
+          if (!req.param('upstreamUniqueSlug')) return done();
+          Project.lookup({ uniqueSlug: req.param('upstreamUniqueSlug') }, done );
+        }
+      ];
+      
+      async.parallel( collectors , function(err, results) {
+        if (err) return next(err);
+        
+        res.render('issue-new', {
+          project: project,
+          original: project,
+          upstream: results[0]
+        });
       });
+
 
     });
   },

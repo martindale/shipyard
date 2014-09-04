@@ -16,7 +16,9 @@ block content
       .col-md-4
         h2
           a.btn.btn-default.pull-right(href="/projects/new") Create &raquo;
-          a(href="/projects") Projects
+          a(href="/projects")
+            i.fa.fa-flask
+            |  Projects
         .nav-group
           each project in projects
             a.list-group-item(href="/#{project._owner.slug}/#{project.slug}") #{project._owner.slug}/#{project.slug}
@@ -32,7 +34,9 @@ block content
     .row
       .col-md-4
         h2
-          a(href="/projects") Projects
+          a(href="/projects")
+            i.fa.fa-flask
+            |  Projects
         ul.nav-group
           each project in projects
             li.list-group-item

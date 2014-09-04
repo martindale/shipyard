@@ -29,17 +29,52 @@ AccountSchema.plugin( slug( 'username' , {
   required: true
 }) );
 
+AccountSchema.virtual('images').get(function() {
+  
+  return this.emails.map(function(email) {
+    var hash = crypto.createHash('md5').update( email ).digest('hex');
+    return {
+      address: email,
+      image: 'https://secure.gravatar.com/avatar/' + hash + '?s=20'
+    }
+  });
+
+  return config.git.data.path + '/' + this._id;
+});
+
+AccountSchema.statics.lookup = function( string , cb ) {
+  var emails = string.match(/\<(.*)\>$/);
+  Account.findOne({
+    $or: [
+      { emails: emails[1] },
+      { email: emails[1] }
+    ]
+  }).exec( cb );
+}
+
+AccountSchema.post('init', function() {
+  if (!this.image || !this.image.url) this.save();
+});
+
 AccountSchema.pre('save', function(next) {
   var self = this;
+  
+  var DEFAULT_AVATAR = '/img/user-avatar.png';
 
-  if (!this.image || !this.image.url || this.image.url == '/img/user-avatar.png' || (this.image.url.match('gravatar.com') && this.email)) {
-    this.image = undefined; // delete element to let mongoose handle it...
-    this.save(); // save now.
+  if (!this.image || !this.image.url || this.image.url == DEFAULT_AVATAR) {
+    var email = self.email;
+    if (!email && self.emails.length) email = self.emails[ 0 ];
 
-    var hash = crypto.createHash('md5').update( (self.email) ? self.email.toLowerCase() : 'test@test.com' ).digest("hex");
-    this.image = {
-        url: 'https://secure.gravatar.com/avatar/' + hash + '?s=260&d=' + encodeURIComponent( 'http://coursefork.org/img/user-avatar.png' )
-      , small: 'https://secure.gravatar.com/avatar/' + hash + '?d=' + encodeURIComponent( 'http://coursefork.org/img/user-avatar.png' )
+    if (email) {
+      email = email.toLowerCase();
+
+      var hash = crypto.createHash('md5').update( email ).digest("hex");
+      this.image = {
+          url: 'https://secure.gravatar.com/avatar/' + hash + '?s=300'
+        , small: 'https://secure.gravatar.com/avatar/' + hash
+      }
+    } else {
+      this.image.url = DEFAULT_AVATAR;
     }
   }
 

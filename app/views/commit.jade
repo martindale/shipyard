@@ -1,6 +1,25 @@
 extends layout
 
-block content
-  h1 Commit #{commit.id}
+block append header
+  style.
+    .file {
+      color: #aaa;
+    }
+    .delete {
+      background-color: #fdd;
+    }
+    .insert {
+      background-color: #dfd;
+    }
+    .info {
+      color: #a0b;
+    }
 
-  pre #{commit.diff}
+block content
+
+  h2 Commit #{commit.commit}
+  
+  p
+    include partials/commit-row
+  
+  | !{commit.diff}

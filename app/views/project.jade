@@ -6,89 +6,161 @@ block prepend projectHeader
     |  fork &raquo;
 
 block content
+  .row
+    .col-md-12
+      include partials/project-header
 
-  include partials/project-header
-
-  pre http://#{config.http.host}:#{config.http.port}/#{project._owner.slug}/#{project.slug}
-  
-  pre #{project._id}
-
-  .dropdown
-    a.btn.btn-default(href="/#{project._owner.slug}/#{project.slug}/branches", data-toggle="dropdown") 
-      i.fa.fa-code-fork
-      |  branch: #{branch} 
-      i.fa.fa-caret-down
-    ul.dropdown-menu(role="menu")
-      each availableBranch in branches
-        li(class=((branch == availableBranch) ? 'active' : undefined))
-          a(href="/#{project._owner.slug}/#{project.slug}/tree/#{availableBranch}") #{availableBranch}
-  p
-    strong Latest:
-    |  #{commits[0].id}
-
-  hr
-
-  ul.nav.nav-tabs.tabs-right#project-tabs
-    li.active
-      a(href="#code", data-toggle="tab")
-        i.fa.fa-code
-        |  Code
-    li
-      a(href="#issues", data-toggle="tab")
-        i.fa.fa-warning
-        |  Issues
-    li
-      a(href="#docks", data-toggle="tab")
-        i.fa.fa-users
-        |  Docks
-    li
-      a(href="#network", data-toggle="tab")
-        i.fa.fa-code-fork
-        |  Network
-
-  .tab-content
-    .tab-pane.active#code
-      h2 Commits
-      ul.nav.nav-list
-      each commit in commits
-        include partials/commit-row
-
-      h2 Code
-      table.table
-        each file in files
-          tr
-            td
-              a(href="/#{project._owner.slug}/#{project.slug}/blob/#{branch}/#{file.name}") #{file.name}
-            td
-              a(href="") #{file.commit.msg}
-            td
-              a(href="") #{moment(file.commit.timestamp).fromNow()}
-
-      h2 README.md
-      .readme !{project.readme}
-
-    .tab-pane#issues
-      a.btn.btn-default.pull-right(href="/#{project._owner.slug}/#{project.slug}/issues/new") Create Issue &raquo;
-      h2 Issues
-      table.table
-        each issue in issues
-          include partials/issue
-
-    .tab-pane#docks
-      h2 Docks
-      table.table
-        each dock in docks
-          tr
-            td #{dock.id}
-            td #{dock.title}
-            
-    .tab-pane#network
-      h2 Network
-      ul.nav.nav-list
-      each fork in forks
-        - var project = fork
+  .row
+    .col-md-12
+      ul.nav.nav-pills.nav-justified(role="tablist")
         li
-          include partials/project-name
+          a(href="#commits") #{commits.length} commits
+        li
+          a(href="#branches") #{branches.length} branches
+        li
+          a(href="#releases") #{releases.length} releases
+        li
+          a(href="#contributors") #{contributors.length} contributors
+
+      pre http://#{config.http.host}:#{config.http.port}/#{project._owner.slug}/#{project.slug}
+      
+      pre.hide #{project._id}
+
+      a.btn.btn-success(href="/#{project._owner.slug}/#{project.slug}/diffs/#{branch}…#{((project._upstream) ? project._upstream.slug + '/master' : '')}", title="Start a Change Proposal")
+        i.fa.fa-refresh
+      .dropdown
+        a.btn.btn-default(href="/#{project._owner.slug}/#{project.slug}/branches", data-toggle="dropdown") 
+          i.fa.fa-code-fork
+          |  branch: #{branch} 
+          i.fa.fa-caret-down
+        ul.dropdown-menu(role="menu")
+          each availableBranch in branches
+            li(class=((branch == availableBranch) ? 'active' : undefined))
+              a(href="/#{project._owner.slug}/#{project.slug}/trees/#{availableBranch}") #{availableBranch}
+      
+      if (flags && flags.setup)
+        br
+        .panel.panel-warning
+          .panel-heading
+            h3.panel-title Repository Unconfigured!
+          .panel-body
+            h4 You'll need to push your first commit.
+            p 
+              strong First, clone this repository:
+              pre git clone http://#{config.http.host}:#{config.http.port}/#{project._owner.slug}/#{project.slug}
+            p
+              strong Create a commit:
+              pre.bash
+                | cd #{project.slug}
+                | echo "my first commit" > README.md
+                | git add README.md && git commit -m "my commit"
+            p
+              strong Push to #{config.service.name}:
+              pre.bash
+                | git push origin master
+            
+            hr
+                
+            h4 Already have code?
+            p
+              strong Add #{config.service.name} as a remote:
+              pre.bash
+                | git remote add origin http://#{config.http.host}:#{config.http.port}/#{project._owner.slug}/#{project.slug}
+              strong Synchronize entire repo:
+              pre.bash
+                | git push --all origin
+            
+      else
+        p
+          - var commit = commits[0]
+          include partials/commit-row
+
+        ul.nav.nav-tabs.tabs-right#project-tabs
+          li.active
+            a(href="#code", data-toggle="tab")
+              i.fa.fa-code
+              |  Code
+          li
+            a(href="#commits", data-toggle="tab")
+              i.fa.fa-code
+              |  Commits
+          li
+            a(href="#issues", data-toggle="tab")
+              i.fa.fa-bug
+              |  Issues
+          li
+            a(href="#docks", data-toggle="tab")
+              i.fa.fa-users
+              |  Docks
+          li
+            a(href="#network", data-toggle="tab")
+              i.fa.fa-code-fork
+              |  Network
+
+        .tab-content
+          .tab-pane#commits
+            h2 Commits
+            ul.nav.nav-group
+              each commit in commits
+                include partials/commit-row
+
+          .tab-pane.active#code
+            h2 Code
+            table.table
+              each file in files
+                tr
+                  td
+                    a(href="/#{project._owner.slug}/#{project.slug}/blobs/#{branch}/#{file.name}")
+                      if (file.type === 'tree')
+                        i.fa.fa-folder
+                      else
+                        i.fa.fa-file-o
+                      |  #{file.name}
+                  td
+                    a(href="/#{project._owner.slug}/#{project.slug}/commits/#{file.commit.commit}") #{file.commit.message}
+                  td
+                    a(href="/#{project._owner.slug}/#{project.slug}/commits/#{file.commit.commit}") #{moment(file.commit.date).fromNow()}
+
+            .panel.panel-default
+              .panel-heading
+                h3.panel-title
+                  i.fa.fa-book
+                  |  README.md
+              .panel-body
+                if (project.readme)
+                  .readme !{project.readme}
+                else
+                  h2 This project has no README.md file.  Maybe you should create one!
+
+          .tab-pane#issues
+            a.btn.btn-default.pull-right(href="/#{project._owner.slug}/#{project.slug}/issues/new") Create Issue &raquo;
+            h2 Issues
+            table.table
+              each issue in issues
+                include partials/issue
+
+          .tab-pane#docks
+            h2 Docks
+            table.table
+              each dock in docks
+                tr
+                  td #{dock.id}
+                  td #{dock.title}
+                  
+          .tab-pane#network
+            h2 Network
+            ul.list-group
+              each fork in forks
+                - var project = fork
+                li.list-group-item
+                  include partials/project-name
+
+      //-.col-md-2
+        .nav.nav-tabs.nav-stacked
+          li.active
+            a(href="#code", data-toggle="tab")
+              i.fa.fa-code
+              |  Code
 
   form.modal.fade#modal-fork(action="/projects", method="post")
     input(type="hidden", name="fromProjectID", value="#{project._id}")
