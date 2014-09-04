@@ -19,6 +19,26 @@ var passportLocalMongoose = require('passport-local-mongoose');
 var RedisStore = require('connect-redis')(express);
 var redis = require('redis');
 
+var RoleProvider = require('connect-roles');
+var client = new RoleProvider({
+  failureHandler: function(req, res, action) {
+    res.status(403);
+    req.format({
+      json: function() {
+        res.send({ status: error , message: 'Access denied '});
+      },
+      html: function() {
+        res.render('access-denied', { action: action });
+      }
+    });
+  }
+});
+client.use('git push', function(req, action) {
+  if (!req.project) return false;
+  if (!req.user) return false;
+  if (req.user._actor.toString() === project._actor.toString()) return true;
+});
+
 var moment = require('moment');
 var marked = require('marked');
 marked.setOptions({
@@ -130,15 +150,11 @@ app.use( require('express-session')({
   , store: sessionStore
 }));
 
-/* Configure the registration and login system */
-app.use(passport.initialize());
-app.use(passport.session());
-
 app.set('view engine', 'jade');
 app.set('views', 'app/views');
 
 // TODO: utilize confluence, sensemaker
-passport.use(new LocalStrategy( Account.authenticate() ) );
+passport.use(Account.createStrategy());
 passport.use(new GoogleStrategy({
     returnURL: 'http://eric.bp:9200/auth/google/callback',
     realm: 'http://eric.bp:9200/',
@@ -176,8 +192,14 @@ passport.use(new GoogleStrategy({
 passport.serializeUser( Account.serializeUser() );
 passport.deserializeUser( Account.deserializeUser() );
 
+/* Configure the registration and login system */
+app.use(passport.initialize());
+app.use(passport.session());
+app.use(client.middleware());
+
 /* configure some local variables for use later */
 app.use(function(req, res, next) {
+
   res.locals.user = req.user;
   res.locals.next = req.path;
 
@@ -226,6 +248,8 @@ function setupPushover(req, res, next) {
     if (!project) { return next(); }
 
     req.projectID = project._id.toString();
+    req.project = project;
+    
     req.resume();
     next();
   });
@@ -252,7 +276,7 @@ app.get('/:actorSlug/:projectSlug*', setupRepo , setupPushover , function(req, r
   debug.git('handling get...');
   app.repos.handle(req, res);
 });
-app.post('/:actorSlug/:projectSlug*', setupRepo , setupPushover , function(req, res, next) {
+app.post('/:actorSlug/:projectSlug*', setupRepo , setupPushover , client.can('git push') , function(req, res, next) {
   if (!gitAcceptRegex.exec( req.headers.accept ) ) return next();
   debug.git('handling post...');
   app.repos.handle(req, res);
@@ -293,11 +317,9 @@ app.post('/register', function(req, res, next) {
       return res.render('register', { user : user });
     }
 
-    return res.redirect( next );
-
     req.login( user , function(err) {
-      var next = req.param('next') ? req.param('next') : '/';
-      
+      var path = req.param('next') || '/';
+      return res.redirect( path );
     });
   });
 });
