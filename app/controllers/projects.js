@@ -9,7 +9,7 @@ function cleanGitLog(x) {
   return {
       id: parts.shift()
     , message: parts.join(' ')
-  }
+  };
 }
 
 module.exports = {
@@ -37,16 +37,12 @@ module.exports = {
     Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
       if (!project) { return next(); }
 
-      //var diff = require('../lib/pretty-diff');
+      var repo = git(project.path);
 
-      exec( 'cd ' + project.path + ' && git diff '+req.param('commitID')+'^ '+req.param('commitID') , function(err, stdout, stderr) {
+      repo.diff(req.param('commitID'), req.param('commitID'), function(err, rawDiff) {
         if (err) { console.log(err); }
-        if (stderr) { return next(); }
-
-        var rawDiff = stdout;
-
-        var diff = require('pretty-diff');
         
+        var diff = require('pretty-diff');
         var html = diff( rawDiff );
       
         res.provide(err , {
@@ -63,11 +59,11 @@ module.exports = {
   viewBlob: function(req, res, next) {
     Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
       if (!project) { return next(); }
+      
+      var repo = git(project.path);
 
-      var command = 'cd ' + project.path + ' && git show ' + req.param('branchName') + ':' + req.param('filePath');
-      exec( command , function(err, stdout, stderr) {
-
-        var raw = stdout;
+      repo.show(req.param('branchName'), req.param('filePath'), function(err, raw){
+        if (err) {console.log(err);}
         var contents = raw;
         var type = mime.lookup( req.param('filePath') );
 
@@ -81,12 +77,14 @@ module.exports = {
           break;
         }
 
-        exec('cd  ' + project.path + ' && git log --pretty=oneline  '+ req.param('filePath'), function(err, stdout, stderr) {
-          if (err) { console.log(err); }
+        repo.logFilePretty(req.param('filePath'), function(err, commitData) {
+          if (err) { console.log(err);}
 
-          var commits = stdout.split('\n');
-          commits = commits.map( cleanGitLog );
-
+          var commits = commitData.split('\n');
+          commits = commits.map( cleanGitLog ).filter(function(x) {
+            return x.length > 0;
+          });
+          
           return res.render('file', {
             project: project,
             file: {
@@ -175,7 +173,7 @@ module.exports = {
             // validate requests to view trees at specific commits
             // NOTE: this is different from the call used to collect commits
             // for display in the "commits" tab in the UI
-            repo.logPretty(branch, function(err, commits) {
+            repo.logBranchPretty(branch, function(err, commits) {
               if (err) console.log(err);
               
               var commits = commits.split('\n').map( cleanGitLog ).map(function(x) {
@@ -219,7 +217,7 @@ module.exports = {
                   
                   // get the latest commit (and its author, timestamp, and
                   // message) from the git log
-                  repo.logFilePretty(blob.name, function(err, commit) {
+                  repo.logFilePrettyFormatted(blob.name, function(err, commit) {
                     var parts = commit.split(' ');
                     
                     blob.commit = {
