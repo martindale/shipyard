@@ -26,7 +26,7 @@ block content
       
       pre.hide #{project._id}
 
-      a.btn.btn-success(href="/#{project._owner.slug}/#{project.slug}/diffs#{((project._upstream) ? 'project._upstream.slug' : '')}", title="Start a Change Proposal")
+      a.btn.btn-success(href="/#{project._owner.slug}/#{project.slug}/diffs/#{branch}…#{((project._upstream) ? project._upstream.slug + '/master' : '')}", title="Start a Change Proposal")
         i.fa.fa-refresh
       .dropdown
         a.btn.btn-default(href="/#{project._owner.slug}/#{project.slug}/branches", data-toggle="dropdown") 
@@ -58,6 +58,17 @@ block content
               strong Push to #{config.service.name}:
               pre.bash
                 | git push origin master
+            
+            hr
+                
+            h4 Already have code?
+            p
+              strong Add #{config.service.name} as a remote:
+              pre.bash
+                | git remote add origin http://#{config.http.host}:#{config.http.port}/#{project._owner.slug}/#{project.slug}
+              strong Synchronize entire repo:
+              pre.bash
+                | git push --all origin
             
       else
         p

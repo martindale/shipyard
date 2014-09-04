@@ -222,7 +222,7 @@ function setupRepo(req, res, next) {
 function setupPushover(req, res, next) {
   req.pause();
   Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
-    if (err) { console.log(err); }
+    if (err) { debug.http(err); }
     if (!project) { return next(); }
 
     req.projectID = project._id.toString();
@@ -230,7 +230,6 @@ function setupPushover(req, res, next) {
     next();
   });
 }
-
 
 var pushover = require('./lib/pushover');
 app.repos = pushover( config.git.data.path );
@@ -329,6 +328,9 @@ app.get('/:actorSlug/:projectSlug/issues/:issueID',                 setupRepo, i
 app.get('/:actorSlug/:projectSlug/issues/new',                      setupRepo, issues.createForm );
 app.post('/:actorSlug/:projectSlug/issues',          requireLogin , setupRepo, issues.create );
 
+app.get('/:actorSlug/:projectSlug/diffs',                           setupRepo, issues.createForm );
+app.get('/:actorSlug/:projectSlug/diffs/:fromBranch%E2%80%A6:upstreamActorSlug/:upstreamProjectSlug', setupRepo, issues.createForm );;
+
 app.post('/:actorSlug/:projectSlug/issues/:issueID/comments', requireLogin , setupRepo, issues.addComment );
 
 //app.get('/:actorSlug/:projectSlug.git/info/refs',               setupRepo , projects.git.refs );
@@ -340,8 +342,34 @@ app.get('/people', people.list);
 app.get('/:organizationSlug', organizations.view );
 app.get('/:usernameSlug',     people.view );
 
+app.post('/:usernameSlug/emails', requireLogin , people.addEmail );
+app.delete('/:usernameSlug/emails', requireLogin , people.removeEmail );
+
 app.get('*', function(req, res) {
   res.status(404).render('404');
 });
 
-app.listen( config.http.port );
+var WebSocketServer = require('maki-service-websockets');
+
+// Maki stub
+// TODO: implement proper Maki
+// maki exposes a lot of this automatically...
+// TODO: document using Maki this way
+var maki = {
+  debug: true ,
+  app: app ,
+  routes: {
+    '/projects': 'ff'
+  },
+  config: {
+    redis: config.redis
+  },
+  clients: {},
+  JSONRPC: require('maki-jsonrpc')
+};
+maki.httpd = require('http').createServer( maki.app );
+maki.socks = new WebSocketServer();
+
+maki.socks.bind( maki );
+
+maki.httpd.listen( config.http.port );

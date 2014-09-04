@@ -34,14 +34,25 @@ module.exports = {
         
         var diff = require('pretty-diff');
         var html = diff( rawDiff );
-      
-        res.provide(err , {
-          commit: {
-              id: req.param('commitID')
-            , diff: html
-          }
-        }, {
-          template: 'commit'
+        
+        repo.branchLog( req.param('commitID') , function(err, commits) {
+          
+          var commit = commits[0];
+          commit.diff = html;
+          
+          Account.lookup( commit.author , function(err, author) {
+            commit._author = author;
+            return res.render('commit', {
+              commit: commit,
+              project: project
+            })
+            
+            res.provide(err , {
+              commit: commit
+            }, {
+              template: 'commit'
+            });
+          });
         });
       } );
     });
@@ -211,6 +222,7 @@ module.exports = {
               // message) from the git log
               repo.logFilePretty(blob.name, 1, function(err, commit) {
                 blob.commit = commit[0];
+                blob.commit.message = (commit[0].message.length > 50) ? commit[0].message.slice(0, 50) + '…' : commit[0].message;
                 cb(err , blob);
               });
             }, function(err, completedTree) {

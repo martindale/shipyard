@@ -17,5 +17,9 @@ block append header
 
 block content
 
-  h1 Commit #{commit.id}
+  h2 Commit #{commit.commit}
+  
+  p
+    include partials/commit-row
+  
   | !{commit.diff}

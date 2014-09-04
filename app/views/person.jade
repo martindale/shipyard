@@ -1,24 +1,65 @@
 extends layout
 
 block content
-  h1
-    include partials/person
-    |  
-    small a craftsman of code
 
-  .profiles
-    each googleProfile in person.profiles.google
-      i.fa.fa-google-plus
-    else
-      if (person._id.toString() === user._id.toString())
-        a.btn.btn-default(href="/auth/google")
+  .row
+    .col-md-3
+      img.img-rounded.img-responsive(src="#{person.image.url}")
+      h1
+        a(href="/#{person.slug}") #{person.username}
+      h2
+        small a craftsman of code
+
+      .profiles
+        each googleProfile in person.profiles.google
           i.fa.fa-google-plus
-          |  Add Google Profile &raquo;
+        else
+          if (person._id.toString() === user._id.toString())
+            a.btn.btn-default(href="/auth/google")
+              i.fa.fa-google-plus
+              |  Add Google Profile &raquo;
+      
+      if (person._id.toString() === user._id.toString())
+        h4 Emails (only visible to you)
+        .emails.list-group
+          each email in person.images
+            .list-group-item.clearfix
+              .pull-right
+                //- TODO: bindings
+                .btn.btn-xs(data-action="remove-email", data-email="#{email.address}")
+                  | &times;
+              p
+                .pull-left
+                  img(src="#{email.image}")
+                | &nbsp;#{email.address}
+          form(action="/#{user.slug}/emails", method="post")
+            .form-group
+              .input-group
+                input.form-control(name="email", type="email", required)
+                .input-group-btn
+                  button.btn.btn-default(type="submit") Add &raquo;
 
-  h2 
-    i.fa.fa-flask
-    |  Projects
-  ul.list-group
-    each project in projects
-      li.list-group-item
-        include partials/project
+    .col-md-9
+      h2 
+        i.fa.fa-flask
+        |  Projects
+      ul.list-group
+        each project in projects
+          li.list-group-item
+            include partials/project
+            
+  script.
+    $(document).on('click', '*[data-action=remove-email]', function(e) {
+      var self = this;
+      e.preventDefault();
+      $.ajax({
+        url: '/#{user.slug}/emails',
+        method: 'delete',
+        data: { email: $(self).data('email') },
+        success: function() {
+          $(self).parent().parent().slideUp();
+        }
+      });
+      return false;
+    });
+    
