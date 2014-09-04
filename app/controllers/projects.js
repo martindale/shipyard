@@ -121,6 +121,8 @@ module.exports = {
       if (err) return next( err );
       if (!project) { return next(); }
 
+      var repo = git( project.path );
+
       async.parallel([
         function(done) {
           Issue.find({ _project: project._id, type: 'issue' }).populate('_creator').exec( done );
@@ -130,12 +132,22 @@ module.exports = {
         },
         function(done) {
           Project.getForks( project , done );
+        },
+        function(done) {
+          // TODO: implement releases
+          done( null , [] );
+        },
+        function(done) {
+          // TODO: implement contributor listings
+          done( null , [] );
         }
       ], function(err, results) {
 
-        var issues = results[0];
-        var docks  = results[1];
-        var forks  = results[2];
+        var issues       = results[0];
+        var docks        = results[1];
+        var forks        = results[2];
+        var releases     = results[3];
+        var contributors = results[4];
 
         // temporary hack until we get Organizations
         var context = Account;
@@ -207,36 +219,44 @@ module.exports = {
                     if (a === 'master') return -1;
                     return a - b;
                   });
-                  exec('cd '+project.path+' && git log ' + branch + ' --pretty=oneline', function(err, commits) {
-
-                    commits = commits.split('\n').map( cleanGitLog );
-
-                    console.log('project', project);
+                  repo.log(function(err, commits) {
                     
-                    return res.render('project', {
-                        project: project
-                      //, repo: repo
-                      , branch: branch
-                      , branches: branches
-                      , commits: commits
-                      , files: completedTree
-                      , issues: issues
-                      , docks: docks
-                      , forks: forks
-                    });
+                    async.map( commits , function( commit , done ) {
+                      Account.lookup( commit.author , function(err, author) {
+                        commit._author = author;
+                        done( err , commit );
+                      });
+                    }, function(err, commits) {
 
-                    res.provide( err , {
-                        project: project
-                      //, repo: repo
-                      , branch: branch
-                      , branches: branches
-                      , commits: commits
-                      , files: completedTree
-                      , issues: issues
-                      , docks: docks
-                      , forks: forks
-                    } , {
-                      template: 'project'
+                      return res.render('project', {
+                          project: project
+                        //, repo: repo
+                        , branch: branch
+                        , branches: branches
+                        , commits: commits
+                        , files: completedTree
+                        , issues: issues
+                        , docks: docks
+                        , forks: forks
+                        , releases: releases
+                        , contributors: contributors
+                      });
+
+                      res.provide( err , {
+                          project: project
+                        //, repo: repo
+                        , branch: branch
+                        , branches: branches
+                        , commits: commits
+                        , files: completedTree
+                        , issues: issues
+                        , docks: docks
+                        , forks: forks
+                        , releases: releases
+                        , contributors: contributors
+                      } , {
+                        template: 'project'
+                      });
                     });
                   });
                 });

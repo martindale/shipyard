@@ -22,6 +22,7 @@
     "express": "~3.5.2",
     "express-session": "~1.2.1",
     "flashify": "~0.1.2",
+    "gitty": "git://github.com/martindale/gitty#shipright",
     "highlight.js": "~8.0.0",
     "jade": "^1.6.0",
     "less-middleware": "~0.1.14",

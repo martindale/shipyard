@@ -39,7 +39,7 @@ if (!fs.existsSync( config.git.data.path )) {
 // TODO: should we do this?
 _     = require('underscore');
 async = require('async');
-//git   = require('gitty'); // thanks, @gordonwritescode!
+git   = require('gitty'); // thanks, @gordonwritescode!
 
 Account = People  = require('./app/models/Account').Account;
 Comment           = require('./app/models/Comment').Comment;

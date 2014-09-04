@@ -7,89 +7,112 @@ block prepend projectHeader
 
 block content
 
-  include partials/project-header
-
-  pre http://#{config.http.host}:#{config.http.port}/#{project._owner.slug}/#{project.slug}
+  .row
+    .col-md-12
+      include partials/project-header
   
-  pre #{project._id}
-
-  .dropdown
-    a.btn.btn-default(href="/#{project._owner.slug}/#{project.slug}/branches", data-toggle="dropdown") 
-      i.fa.fa-code-fork
-      |  branch: #{branch} 
-      i.fa.fa-caret-down
-    ul.dropdown-menu(role="menu")
-      each availableBranch in branches
-        li(class=((branch == availableBranch) ? 'active' : undefined))
-          a(href="/#{project._owner.slug}/#{project.slug}/tree/#{availableBranch}") #{availableBranch}
-  p
-    strong Latest:
-    |  #{commits[0].id}
-
-  hr
-
-  ul.nav.nav-tabs.tabs-right#project-tabs
-    li.active
-      a(href="#code", data-toggle="tab")
-        i.fa.fa-code
-        |  Code
-    li
-      a(href="#issues", data-toggle="tab")
-        i.fa.fa-warning
-        |  Issues
-    li
-      a(href="#docks", data-toggle="tab")
-        i.fa.fa-users
-        |  Docks
-    li
-      a(href="#network", data-toggle="tab")
-        i.fa.fa-code-fork
-        |  Network
-
-  .tab-content
-    .tab-pane.active#code
-      h2 Commits
-      ul.nav.nav-list
-      each commit in commits
-        include partials/commit-row
-
-      h2 Code
-      table.table
-        each file in files
-          tr
-            td
-              a(href="/#{project._owner.slug}/#{project.slug}/blob/#{branch}/#{file.name}") #{file.name}
-            td
-              a(href="") #{file.commit.msg}
-            td
-              a(href="") #{moment(file.commit.timestamp).fromNow()}
-
-      h2 README.md
-      .readme !{project.readme}
-
-    .tab-pane#issues
-      a.btn.btn-default.pull-right(href="/#{project._owner.slug}/#{project.slug}/issues/new") Create Issue &raquo;
-      h2 Issues
-      table.table
-        each issue in issues
-          include partials/issue
-
-    .tab-pane#docks
-      h2 Docks
-      table.table
-        each dock in docks
-          tr
-            td #{dock.id}
-            td #{dock.title}
-            
-    .tab-pane#network
-      h2 Network
-      ul.nav.nav-list
-      each fork in forks
-        - var project = fork
+  .row
+    .col-md-12
+      ul.nav.nav-pills.nav-justified(role="tablist")
         li
-          include partials/project-name
+          a(href="#commits") #{commits.length} commits
+        li
+          a(href="#branches") #{branches.length} branches
+        li
+          a(href="#releases") #{releases.length} releases
+        li
+          a(href="#contributors") #{contributors.length} contributors
 
+      pre http://#{config.http.host}:#{config.http.port}/#{project._owner.slug}/#{project.slug}
+      
+      pre #{project._id}
+
+      .dropdown
+        a.btn.btn-default(href="/#{project._owner.slug}/#{project.slug}/branches", data-toggle="dropdown") 
+          i.fa.fa-code-fork
+          |  branch: #{branch} 
+          i.fa.fa-caret-down
+        ul.dropdown-menu(role="menu")
+          each availableBranch in branches
+            li(class=((branch == availableBranch) ? 'active' : undefined))
+              a(href="/#{project._owner.slug}/#{project.slug}/tree/#{availableBranch}") #{availableBranch}
+      p
+        strong Latest:
+        |  #{commits[0].id}
+
+      hr
+
+      ul.nav.nav-tabs.tabs-right#project-tabs
+        li.active
+          a(href="#code", data-toggle="tab")
+            i.fa.fa-code
+            |  Code
+        li
+          a(href="#issues", data-toggle="tab")
+            i.fa.fa-warning
+            |  Issues
+        li
+          a(href="#docks", data-toggle="tab")
+            i.fa.fa-users
+            |  Docks
+        li
+          a(href="#network", data-toggle="tab")
+            i.fa.fa-code-fork
+            |  Network
+
+      .tab-content
+        .tab-pane.active#code
+          h2 Commits
+          ul.nav.nav-group
+          each commit in commits
+            include partials/commit-row
+
+          h2 Code
+          table.table
+            each file in files
+              tr
+                td
+                  a(href="/#{project._owner.slug}/#{project.slug}/blob/#{branch}/#{file.name}") #{file.name}
+                td
+                  a(href="") #{file.commit.msg}
+                td
+                  a(href="") #{moment(file.commit.timestamp).fromNow()}
+
+          h2 README.md
+          .readme !{project.readme}
+
+        .tab-pane#issues
+          a.btn.btn-default.pull-right(href="/#{project._owner.slug}/#{project.slug}/issues/new") Create Issue &raquo;
+          h2 Issues
+          table.table
+            each issue in issues
+              include partials/issue
+
+        .tab-pane#docks
+          h2 Docks
+          table.table
+            each dock in docks
+              tr
+                td #{dock.id}
+                td #{dock.title}
+                
+        .tab-pane#network
+          h2 Network
+          ul.nav.nav-list
+          each fork in forks
+            - var project = fork
+            li
+              include partials/project-name
+
+    //-.col-md-2
+      .nav.nav-tabs.nav-stacked
+        li.active
+          a(href="#code", data-toggle="tab")
+            i.fa.fa-code
+            |  Code
+    
+    
+    
   form.modal.fade#modal-fork(action="/projects", method="post")
     input(type="hidden", name="fromProjectID", value="#{project._id}")
 

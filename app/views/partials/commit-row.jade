@@ -1,2 +1,13 @@
-li
-  a(href="/#{project._owner.slug}/#{project.slug}/commit/#{commit.id}") #{commit.message}
+li.list-group-item
+  a(href="/#{project._owner.slug}/#{project.slug}/commit/#{commit.commit}")
+    .pull-right
+      .btn-group
+        .btn.btn-default
+          i.fa.fa-code
+        .btn.btn-default #{commit.commit.substring(0, 7)}
+    p
+      strong #{commit.message}
+    p
+      - var person = commit._author
+      include person
+      |  authored on <abbr class="timestamp" title="#{commit.date}">#{moment(commit.date).format('MMM D, YYYY')}</abbr>

@@ -29,6 +29,16 @@ AccountSchema.plugin( slug( 'username' , {
   required: true
 }) );
 
+AccountSchema.statics.lookup = function( string , cb ) {
+  var emails = string.match(/\<(.*)\>$/);
+  Account.findOne({
+    $or: [
+      { emails: emails[1] },
+      { email: emails[1] }
+    ]
+  }).exec( cb );
+}
+
 AccountSchema.pre('save', function(next) {
   var self = this;
 
