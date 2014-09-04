@@ -206,7 +206,7 @@ module.exports = {
                 
                 async.map( tree , function( blob , cb ) {
                   
-                  exec('cd ' + project.path + ' && git log -n 1 --pretty=format:"%H %ae %at %s" -- ' + blob.name, function(err, commit) {
+                  exec('cd ' + project.path + ' && git log -n 1 --pretty=format:"%H %ae %at %s" '+ branch +' -- ' + blob.name, function(err, commit) {
                     var parts = commit.split(' ');
                     
                     blob.commit = {
@@ -253,7 +253,7 @@ module.exports = {
                       });
                       
                       // TODO: eliminate double calls
-                      repo.log(function(err, commits) {
+                      repo.branchLog( branch , function(err, commits) {
                         
                         async.map( commits , function( commit , done ) {
                           Account.lookup( commit.author , function(err, author) {
