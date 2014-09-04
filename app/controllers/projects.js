@@ -2,15 +2,6 @@ var fs = require('fs');
 var exec = require('child_process').exec;
 var mime = require('mime');
 
-function cleanGitLog(x) {
-  var parts = x.split(/\s/);
-
-  return {
-      id: parts.shift()
-    , message: parts.join(' ')
-  };
-}
-
 module.exports = {
   index: function(req, res, next) {
 
@@ -87,14 +78,8 @@ module.exports = {
           break;
         }
 
-        repo.logFilePretty(req.param('filePath'), function(err, commitData) {
+        repo.logFilePretty(req.param('filePath'), 0, function(err, commits) {
           if (err) { console.log(err);}
-
-          var commits = commitData.split('\n');
-          commits = commits.map( cleanGitLog ).filter(function(x) {
-            return x.length > 0;
-          });
-          
           return res.render('file', {
             project: project,
             file: {
@@ -157,199 +142,165 @@ module.exports = {
 
         // temporary hack until we get Organizations
         var context = Account;
+        var branch = req.param('branchName') || 'master';
+        var branches = [];
+        var commits = [];
+        var files = [];
+        var flags = {};
+        
+        async.waterfall([
+        
+          function(next) {
 
-        switch (project._owner.type) {
-          case 'Account':      var context = Account;      break;
-          case 'Organization': var context = Organization; break;
-        }
+            switch (project._owner.type) {
+              case 'Account':      context = Account;      break;
+              case 'Organization': context = Organization; break;
+            }
+            
+            context.findOne({ _id: project._owner.target }, function(err, owner) {
+              if (err) {
+                console.log(err);
+              }
+              project._owner = owner;
+              project.path = config.git.data.path + '/' + project._id; // remove with lean()
 
-        context.findOne({ _id: project._owner.target }, function(err, owner) {
-          if (err) { console.log(err); }
-
-          project._owner = owner;
-          project.path = config.git.data.path + '/' + project._id; // remove with lean()
-
-          var branch = req.param('branchName') || 'master';
-          
-          // get a clean list of all available branches
-          repo.shortBranches(function(err, branchData) {
-            var gitBranches = branchData.split('\n').filter(function(x) {
-              return x.length > 0;
+              next(err);
             });
-            
-            
-            // TODO: fail far earlier
-            if (gitBranches.length === 0) return res.render('project', {
-              project: project,
-              issues: issues,
-              docks: docks,
-              forks: forks,
-              commits: [],
-              branches: [],
-              files: [],
-              releases: releases,
-              contributors: contributors,
-              flags: {
-                setup: true // require setup from user
+          },
+          // get a clean list of all available branches
+          function(next) {
+            repo.shortBranches(function(err, gitBranches) {
+              // TODO: fail far earlier
+              if (gitBranches.length === 0) {
+                flags.setup = true;
+                next(true);
+              }
+              else {
+                // no failure?  repo is setup?  GO.
+                next(null, gitBranches);
               }
             });
-            
-            // no failure?  repo is setup?  GO.
-            
+          },
+          function(gitBranches, next) {
             // get a clean list of all commits on the current branch
             // these will be added to the branch checker, which is used to
             // validate requests to view trees at specific commits
             // NOTE: this is different from the call used to collect commits
             // for display in the "commits" tab in the UI
-            repo.logBranchPretty(branch, function(err, commits) {
-              if (err) console.log(err);
+            repo.logBranchPretty(branch, function(err, branchCommits) {
+              if (err) {
+                console.log(err);
+              }
+
+              branches = _.union(gitBranches, branchCommits.map(function (commit) {
+                return commit.commit;
+              }));
               
-              var commits = commits.split('\n').map( cleanGitLog ).map(function(x) {
-                return x.id;
-              }).filter(function(x) {
-                return x.length > 0;
-              });
+              commits = branchCommits;
 
-              var branches = _.union( gitBranches , commits );
-
-              debug.git('BRANCH: ' + branch );
+              debug.git('BRANCH: ' + branch);
               debug.git('BRANCHES: ' + branches);
 
               // by checking our list of branches, we prevent remote code execs
-              if (branches.indexOf( branch ) === -1) return next();
-              
-              // browse the tree at the specific "branch" (can be a real branch,
-              // OR it can be a commit sha )
-              repo.lsTree(branch, function(err, treeData) {
-                if (err) { console.log(err); }
-
-                // TODO: expose this in gitty
-                var tree = treeData.split('\n').map(function(x) {
-                  var parts = x.split(/\s/);
-                  return {
-                      attributes: parts[0]
-                    , type:       parts[1]
-                    , id:         parts[2]
-                    , name:       parts[3]
-                  };
-                });
-
-                // remove erroneous blank entry
-                tree = _.filter( tree , function(x) {
-                  return x.name;
-                });
-                
-                // asynchronously collect the latest commit for each known file
-                // in the current view
-                async.map( tree , function( blob , cb ) {
-                  
-                  // get the latest commit (and its author, timestamp, and
-                  // message) from the git log
-                  repo.logFilePrettyFormatted(blob.name, function(err, commit) {
-                    var parts = commit.split(' ');
-                    
-                    var message = parts.slice( 3 ).join(' ');
-                    
-                    blob.commit = {
-                      sha: parts[0],
-                      author: parts[1],
-                      date: (new Date( parts[2] * 1000 )),
-                      message: (message.length > 50) ? message.slice(0, 50) + '…' : message
-                    };
-                    
-                    cb(err , blob);
-                  });
-                }, function(err, completedTree) {
-                  
-                  function compareByName(a, b) {
-                    if (a.name < b.name) return -1;
-                    if (a.name > b.name) return 1;
-                    return 0;
-                  }
-                  function compareByType(a, b) {
-                    if (a.type === 'tree') return -1;
-                    if (a.type === 'blob') return 1;
-                    return 0;
-                  }
-                  
-                  // sort by name first
-                  completedTree.sort(function(a, b) {
-                    if (a.type === b.type) return compareByName(a, b);
-                    return compareByType(a, b);
-                  });
-
-                  // collect the README file if it exists
-                  repo.show(branch, 'README.md', function(err, readme){
-                    if (readme) {
-                      project.readme = req.app.locals.marked(readme);
-                    }
-
-                    // collect a clean list of branches
-                    // TODO: this is a duplicate of an existing call above?
-                    repo.shortBranches(function(err, branchData) {
-                      var branches = branchData.split('\n').map(function(x) {
-                        return x.trim();
-                      }).filter(function(x) {
-                        return x.length;
-                      }).sort(function(a, b) {
-                        if (a === 'master') return -1;
-                        return a - b;
-                      });
-                      
-                      branches.push( branch );
-                      branches = _.uniq( branches );
-                      
-                      // TODO: eliminate double calls
-                      // get the log of commits on this current branch / commit
-                      repo.branchLog( branch , function(err, commits) {
-                        
-                        // find a corresponding User based on the commit email
-                        async.map( commits , function( commit , done ) {
-                          Account.lookup( commit.author , function(err, author) {
-                            commit._author = author;
-                            done( err , commit );
-                          });
-                        }, function(err, commits) {
-                          
-                          branches.push( branch );
-                          branches = _.uniq( branches );
-
-                          return res.render('project', {
-                              project: project
-                            //, repo: repo
-                            , branch: branch
-                            , branches: branches
-                            , commits: commits
-                            , files: completedTree
-                            , issues: issues
-                            , docks: docks
-                            , forks: forks
-                            , releases: releases
-                            , contributors: contributors
-                          });
-
-                          res.provide( err , {
-                              project: project
-                            //, repo: repo
-                            , branch: branch
-                            , branches: branches
-                            , commits: commits
-                            , files: completedTree
-                            , issues: issues
-                            , docks: docks
-                            , forks: forks
-                            , releases: releases
-                            , contributors: contributors
-                          } , {
-                            template: 'project'
-                          });
-                        });
-                      });
-                    });
-                  });
-                });
-              });
+              if (branches.indexOf(branch) === -1) {
+                return next("Invalid branch");
+              }
+              next(err);
             });
+          },
+          function(next) {
+            // browse the tree at the specific "branch" (can be a real branch,
+            // OR it can be a commit sha )
+            repo.lsTree(branch, next);
+          },
+          function(tree, next) {
+            // asynchronously collect the latest commit for each known file
+            // in the current view
+            async.map( tree , function( blob , cb ) {
+
+              // get the latest commit (and its author, timestamp, and
+              // message) from the git log
+              repo.logFilePretty(blob.name, 1, function(err, commit) {
+                blob.commit = commit[0];
+                blob.commit.message = (commit[0].message.length > 50) ? commit[0].message.slice(0, 50) + '…' : commit[0].message;
+                cb(err , blob);
+              });
+            }, function(err, completedTree) {
+
+              function compareByName(a, b) {
+                if (a.name < b.name) return -1;
+                if (a.name > b.name) return 1;
+                return 0;
+              }
+
+              function compareByType(a, b) {
+                if (a.type === 'tree') return -1;
+                if (a.type === 'blob') return 1;
+                return 0;
+              }
+
+              // sort by name first
+              completedTree.sort(function (a, b) {
+                if (a.type === b.type) return compareByName(a, b);
+                return compareByType(a, b);
+              });
+              files = completedTree;
+              
+              next(err);
+            });
+          },
+          function(next) {
+            // collect the README file if it exists
+            repo.show(branch, "README.md", next);
+          },
+          function(readme, next){
+            if (readme) {
+              project.readme = req.app.locals.marked(readme);
+            }
+
+            // find a corresponding User based on the commit email
+            async.map( commits , function( commit , done ) {
+              Account.lookup( commit.author , function(err, author) {
+                commit._author = author;
+                done( err , commit );
+              });
+            }, function(err, results) {
+              commits = results || [];
+              next(err);
+            });
+          }
+        ], function(err) {
+          
+          return res.render('project', {
+            project: project
+            //, repo: repo
+            , branch: branch
+            , branches: branches
+            , commits: commits
+            , files: files
+            , issues: issues
+            , docks: docks
+            , forks: forks
+            , releases: releases
+            , contributors: contributors
+            , flags: flags
+          });
+
+          res.provide( err , {
+            project: project
+            //, repo: repo
+            , branch: branch
+            , branches: branches
+            , commits: commits
+            , files: files
+            , issues: issues
+            , docks: docks
+            , forks: forks
+            , releases: releases
+            , contributors: contributors
+            , flags: flags
+          } , {
+            template: 'project'
           });
         });
       });
@@ -416,4 +367,4 @@ module.exports = {
     }
 
   }
-}
+};
