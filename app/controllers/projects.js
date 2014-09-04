@@ -1,11 +1,12 @@
 var fs = require('fs');
 var exec = require('child_process').exec;
 var mime = require('mime');
+var git = require('../../lib/gitty');
 
 function cleanGitLog(x) {
   var parts = x.split(/\s/);
 
-  console.log(parts);
+  //console.log(parts);
 
   return {
       id: parts.shift()
@@ -86,6 +87,8 @@ module.exports = {
     Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
       if (!project) { return next(); }
 
+      var repository = git(project.path);
+
       var command = 'cd ' + project.path + ' && git show ' + req.param('branchName') + ':' + req.param('filePath');
       exec( command , function(err, stdout, stderr) {
 
@@ -138,7 +141,7 @@ module.exports = {
   },
   view: function(req, res, next) {
     Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
-      
+
       if (err) return next( err );
       if (!project) { return next(); }
 
@@ -173,6 +176,7 @@ module.exports = {
           //project.path = config.git.data.path + '/' + project._id; // remove with lean()
           project.path = config.git.data.path + '/' + req.param('uniqueSlug') + '.git'; // remove with lean()
 
+          var repository = git(project.path);
           //var repo = git( config.git.data.path + '/' + project._id );
 
           console.log('project path ' , project.path );
@@ -214,22 +218,20 @@ module.exports = {
               };
             }), function(err, completedTree) {
 
-              var command = 'cd ' + project.path + ' && git show ' + branch + ':README.md';
-              exec( command , function(err, readme , stderr) {
-
+              repository.show(branch, "README.md", function(err, readme){
                 if (readme) {
                   project.readme = req.app.locals.marked(readme);
                 }
 
-                exec('cd '+project.path+' && git for-each-ref --format=\'%(refname:short)\' refs/heads/', function(err, stdout, stderr) {
-                  var branches = stdout.split('\n').map(function(x) {
+                repository.shortBranches(function(err, branchData) {
+                  var branches = branchData.split('\n').map(function(x) {
                     return x.trim();
                   }).sort(function(a, b) {
                     if (a === 'master') return -1;
                     return a - b;
                   });
-                  exec('cd '+project.path+' && git log ' + branch + ' --pretty=oneline', function(err, commits) {
 
+                  repository.logPretty(branch, function(err, commits) {
                     commits = commits.split('\n').map( cleanGitLog );
 
                     console.log('project', project);
