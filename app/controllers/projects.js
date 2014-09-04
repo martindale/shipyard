@@ -183,10 +183,10 @@ module.exports = {
 
           var branch = req.param('branchName') || 'master';
 
-          exec('cd '+project.path+ ' && git ls-tree ' + branch, function(err, stdout, stderr) {
+          repository.lsTree(branch, function(err, treeData) {
             if (err) { console.log(err); }
 
-            var tree = stdout.split('\n').map(function(x) {
+            var tree = treeData.split('\n').map(function(x) {
               var parts = x.split(/\s/);
               return {
                   attributes: parts[0]
