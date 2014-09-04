@@ -5,7 +5,7 @@ doctype html
 html
   head
     block header
-      title shipright
+      title #{config.service.name}
 
       link(rel="stylesheet", href="/css/bootstrap.css")
       link(rel="stylesheet", href="/css/fontawesome/font-awesome.css")
@@ -26,7 +26,7 @@ html
             span.icon-bar
           a.navbar-brand(href="/")
             i.fa.fa-anchor
-            |  shipright
+            |  #{config.service.name}
         .navbar-collapse.collapse
           ul.nav.navbar-nav
             li.active
