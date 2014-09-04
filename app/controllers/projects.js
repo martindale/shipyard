@@ -163,11 +163,17 @@ module.exports = {
 
           var branch = req.param('branchName') || 'master';
           
+          // get a clean list of all available branches
           exec('cd '+project.path+' && git for-each-ref --format=\'%(refname:short)\' refs/heads/', function(err, stdout, stderr) {
             var gitBranches = stdout.split('\n').filter(function(x) {
               return x.length > 0;
             });
             
+            // get a clean list of all commits on the current branch
+            // these will be added to the branch checker, which is used to 
+            // validate requests to view trees at specific commits
+            // NOTE: this is different from the call used to collect commits
+            // for display in the "commits" tab in the UI
             exec('cd ' + project.path + ' && git log ' + branch + ' --pretty=oneline', function(err, commits) {
               if (err) console.log(err);
               
@@ -179,12 +185,14 @@ module.exports = {
 
               var branches = _.union( gitBranches , commits );
 
-              console.log('BRANCH: ' + branch );
-              console.log('BRANCHES: ' + branches);
+              debug.git('BRANCH: ' + branch );
+              debug.git('BRANCHES: ' + branches);
 
               // by checking our list of branches, we prevent remote code execs
               if (branches.indexOf( branch ) === -1) return next();
               
+              // browse the tree at the specific "branch" (can be a real branch,
+              // OR it can be a commit sha )
               exec('cd '+project.path+ ' && git ls-tree ' + branch, function(err, stdout, stderr) {
                 if (err) { console.log(err); }
 
@@ -204,8 +212,12 @@ module.exports = {
                   return x.name;
                 });
                 
+                // asynchronously collect the latest commit for each known file
+                // in the current view
                 async.map( tree , function( blob , cb ) {
                   
+                  // get the latest commit (and its author, timestamp, and
+                  // message) from the git log
                   exec('cd ' + project.path + ' && git log -n 1 --pretty=format:"%H %ae %at %s" '+ branch +' -- ' + blob.name, function(err, commit) {
                     var parts = commit.split(' ');
                     
@@ -237,6 +249,7 @@ module.exports = {
                     return compareByType(a, b);
                   });
 
+                  // collect the README file if it exists
                   var command = 'cd ' + project.path + ' && git show ' + branch + ':README.md';
                   exec( command , function(err, readme , stderr) {
 
@@ -244,6 +257,8 @@ module.exports = {
                       project.readme = req.app.locals.marked(readme);
                     }
 
+                    // collect a clean list of branches
+                    // TODO: this is a duplicate of an existing call above?
                     exec('cd '+project.path+' && git for-each-ref --format=\'%(refname:short)\' refs/heads/', function(err, stdout, stderr) {
                       var branches = stdout.split('\n').map(function(x) {
                         return x.trim();
@@ -253,8 +268,10 @@ module.exports = {
                       });
                       
                       // TODO: eliminate double calls
+                      // get the log of commits on this current branch / commit
                       repo.branchLog( branch , function(err, commits) {
                         
+                        // find a corresponding User based on the commit email
                         async.map( commits , function( commit , done ) {
                           Account.lookup( commit.author , function(err, author) {
                             commit._author = author;
