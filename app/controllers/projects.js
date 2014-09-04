@@ -169,103 +169,123 @@ module.exports = {
           console.log('project path ' , project.path );
 
           var branch = req.param('branchName') || 'master';
+          
+          repo.branches(function(err, branches) {
+            var branches = _.union( branches.current , branches.other );
+            if (branches.indexOf( branch ) === -1) return next();
+            
+            exec('cd '+project.path+ ' && git ls-tree ' + branch, function(err, stdout, stderr) {
+              if (err) { console.log(err); }
 
-          exec('cd '+project.path+ ' && git ls-tree ' + branch, function(err, stdout, stderr) {
-            if (err) { console.log(err); }
-
-            var tree = stdout.split('\n').map(function(x) {
-              var parts = x.split(/\s/);
-              return {
-                  attributes: parts[0]
-                , type:       parts[1]
-                , id:         parts[2]
-                , name:       parts[3]
-              };
-            });
-
-            // remove erroneous blank entry
-            tree = _.filter( tree , function(x) {
-              return x.name;
-            });
-
-            tree.sort(function(a, b) {
-              if (a.name < b.name) return -1;
-              if (a.name > b.name) return 1;
-              return 0;
-            });
-
-            async.parallel(tree.map(function(x) {
-              return function(done) {
-
-                x.commit = {
-                  timestamp: new Date()
+              // TODO: expose this in gitty
+              var tree = stdout.split('\n').map(function(x) {
+                var parts = x.split(/\s/);
+                return {
+                    attributes: parts[0]
+                  , type:       parts[1]
+                  , id:         parts[2]
+                  , name:       parts[3]
                 };
+              });
 
-                done( null , x );
-              };
-            }), function(err, completedTree) {
-
-              var command = 'cd ' + project.path + ' && git show ' + branch + ':README.md';
-              exec( command , function(err, readme , stderr) {
-
-                if (readme) {
-                  project.readme = req.app.locals.marked(readme);
+              // remove erroneous blank entry
+              tree = _.filter( tree , function(x) {
+                return x.name;
+              });
+              
+              async.map( tree , function( blob , cb ) {
+                
+                exec('cd ' + project.path + ' && git log -n 1 --pretty=format:"%H %ae %at %s" -- ' + blob.name, function(err, commit) {
+                  var parts = commit.split(' ');
+                  
+                  blob.commit = {
+                    sha: parts[0],
+                    author: parts[1],
+                    date: (new Date( parts[2] * 1000 )),
+                    message: parts.slice( 3 ).join(' ')
+                  };
+                  
+                  cb(err , blob);
+                });
+              }, function(err, completedTree) {
+                
+                function compareByName(a, b) {
+                  if (a.name < b.name) return -1;
+                  if (a.name > b.name) return 1;
+                  return 0;
                 }
+                function compareByType(a, b) {
+                  if (a.type === 'tree') return -1;
+                  if (a.type === 'blob') return 1;
+                  return 0;
+                }
+                
+                // sort by name first
+                completedTree.sort(function(a, b) {
+                  if (a.type === b.type) return compareByName(a, b);
+                  return compareByType(a, b);
+                });
 
-                exec('cd '+project.path+' && git for-each-ref --format=\'%(refname:short)\' refs/heads/', function(err, stdout, stderr) {
-                  var branches = stdout.split('\n').map(function(x) {
-                    return x.trim();
-                  }).sort(function(a, b) {
-                    if (a === 'master') return -1;
-                    return a - b;
-                  });
-                  repo.log(function(err, commits) {
-                    
-                    async.map( commits , function( commit , done ) {
-                      Account.lookup( commit.author , function(err, author) {
-                        commit._author = author;
-                        done( err , commit );
-                      });
-                    }, function(err, commits) {
+                var command = 'cd ' + project.path + ' && git show ' + branch + ':README.md';
+                exec( command , function(err, readme , stderr) {
 
-                      return res.render('project', {
-                          project: project
-                        //, repo: repo
-                        , branch: branch
-                        , branches: branches
-                        , commits: commits
-                        , files: completedTree
-                        , issues: issues
-                        , docks: docks
-                        , forks: forks
-                        , releases: releases
-                        , contributors: contributors
-                      });
+                  if (readme) {
+                    project.readme = req.app.locals.marked(readme);
+                  }
 
-                      res.provide( err , {
-                          project: project
-                        //, repo: repo
-                        , branch: branch
-                        , branches: branches
-                        , commits: commits
-                        , files: completedTree
-                        , issues: issues
-                        , docks: docks
-                        , forks: forks
-                        , releases: releases
-                        , contributors: contributors
-                      } , {
-                        template: 'project'
+                  exec('cd '+project.path+' && git for-each-ref --format=\'%(refname:short)\' refs/heads/', function(err, stdout, stderr) {
+                    var branches = stdout.split('\n').map(function(x) {
+                      return x.trim();
+                    }).sort(function(a, b) {
+                      if (a === 'master') return -1;
+                      return a - b;
+                    });
+                    repo.log(function(err, commits) {
+                      
+                      async.map( commits , function( commit , done ) {
+                        Account.lookup( commit.author , function(err, author) {
+                          commit._author = author;
+                          done( err , commit );
+                        });
+                      }, function(err, commits) {
+
+                        return res.render('project', {
+                            project: project
+                          //, repo: repo
+                          , branch: branch
+                          , branches: branches
+                          , commits: commits
+                          , files: completedTree
+                          , issues: issues
+                          , docks: docks
+                          , forks: forks
+                          , releases: releases
+                          , contributors: contributors
+                        });
+
+                        res.provide( err , {
+                            project: project
+                          //, repo: repo
+                          , branch: branch
+                          , branches: branches
+                          , commits: commits
+                          , files: completedTree
+                          , issues: issues
+                          , docks: docks
+                          , forks: forks
+                          , releases: releases
+                          , contributors: contributors
+                        } , {
+                          template: 'project'
+                        });
                       });
                     });
                   });
                 });
-
               });
             });
           });
         });
-
       });
     });
   },

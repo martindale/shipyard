@@ -25,8 +25,8 @@ block content
 
       pre http://#{config.http.host}:#{config.http.port}/#{project._owner.slug}/#{project.slug}
       
-      pre #{project._id}
-
+      pre.hide #{project._id}
+      
       .dropdown
         a.btn.btn-default(href="/#{project._owner.slug}/#{project.slug}/branches", data-toggle="dropdown") 
           i.fa.fa-code-fork
@@ -36,9 +36,10 @@ block content
           each availableBranch in branches
             li(class=((branch == availableBranch) ? 'active' : undefined))
               a(href="/#{project._owner.slug}/#{project.slug}/tree/#{availableBranch}") #{availableBranch}
+      
       p
-        strong Latest:
-        |  #{commits[0].id}
+        - var commit = commits[0]
+        include partials/commit-row
 
       hr
 
@@ -47,6 +48,10 @@ block content
           a(href="#code", data-toggle="tab")
             i.fa.fa-code
             |  Code
+        li
+          a(href="#commits", data-toggle="tab")
+            i.fa.fa-code
+            |  Commits
         li
           a(href="#issues", data-toggle="tab")
             i.fa.fa-warning
@@ -61,25 +66,39 @@ block content
             |  Network
 
       .tab-content
-        .tab-pane.active#code
+        .tab-pane#commits
           h2 Commits
           ul.nav.nav-group
-          each commit in commits
-            include partials/commit-row
+            each commit in commits
+              include partials/commit-row
 
+        .tab-pane.active#code
           h2 Code
           table.table
             each file in files
               tr
                 td
-                  a(href="/#{project._owner.slug}/#{project.slug}/blob/#{branch}/#{file.name}") #{file.name}
+                  a(href="/#{project._owner.slug}/#{project.slug}/blobs/#{branch}/#{file.name}")
+                    if (file.type === 'tree')
+                      i.fa.fa-folder
+                    else
+                      i.fa.fa-file-o
+                    |  #{file.name}
                 td
-                  a(href="") #{file.commit.msg}
+                  a(href="/#{project._owner.slug}/#{project.slug}/commits/#{file.commit.sha}") #{file.commit.message}
                 td
-                  a(href="") #{moment(file.commit.timestamp).fromNow()}
+                  a(href="/#{project._owner.slug}/#{project.slug}/commits/#{file.commit.sha}") #{moment(file.commit.date).fromNow()}
 
-          h2 README.md
-          .readme !{project.readme}
+          .panel.panel-default
+            .panel-heading
+              h3.panel-title
+                i.fa.fa-book
+                |  README.md
+            .panel-body
+              if (project.readme)
+                .readme !{project.readme}
+              else
+                h2 This project has no README.md file.  Maybe you should create one!
 
         .tab-pane#issues
           a.btn.btn-default.pull-right(href="/#{project._owner.slug}/#{project.slug}/issues/new") Create Issue &raquo;
@@ -99,10 +118,10 @@ block content
         .tab-pane#network
           h2 Network
           ul.nav.nav-list
-          each fork in forks
-            - var project = fork
-            li
-              include partials/project-name
+            each fork in forks
+              - var project = fork
+              li
+                include partials/project-name
 
     //-.col-md-2
       .nav.nav-tabs.nav-stacked

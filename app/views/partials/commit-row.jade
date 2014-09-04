@@ -1,13 +1,16 @@
 li.list-group-item
-  a(href="/#{project._owner.slug}/#{project.slug}/commit/#{commit.commit}")
-    .pull-right
-      .btn-group
-        .btn.btn-default
-          i.fa.fa-code
-        .btn.btn-default #{commit.commit.substring(0, 7)}
-    p
+  .pull-right
+    .btn-group
+      a.btn.btn-default(href="/#{project._owner.slug}/#{project.slug}/commit/#{commit.commit}")
+        i.fa.fa-code
+      a.btn.btn-default(href="/#{project._owner.slug}/#{project.slug}/commit/#{commit.commit}") #{commit.commit.substring(0, 7)}
+  p
+    a(href="/#{project._owner.slug}/#{project.slug}/commit/#{commit.commit}")
       strong #{commit.message}
-    p
+  p
+    if commit._author
       - var person = commit._author
       include person
-      |  authored on <abbr class="timestamp" title="#{commit.date}">#{moment(commit.date).format('MMM D, YYYY')}</abbr>
+    else
+      code #{commit.author}
+    |  authored on <abbr class="timestamp" title="#{commit.date}">#{moment(commit.date).format('MMM D, YYYY')}</abbr>
