@@ -64,8 +64,6 @@ module.exports = {
     Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
       if (!project) { return next(); }
 
-      var repository = git(project.path);
-
       var command = 'cd ' + project.path + ' && git show ' + req.param('branchName') + ':' + req.param('filePath');
       exec( command , function(err, stdout, stderr) {
 
@@ -118,7 +116,7 @@ module.exports = {
   },
   view: function(req, res, next) {
     Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
-
+      
       if (err) return next( err );
       if (!project) { return next(); }
 
@@ -165,12 +163,18 @@ module.exports = {
           project.path = config.git.data.path + '/' + project._id; // remove with lean()
 
           var branch = req.param('branchName') || 'master';
-
+          
+          // get a clean list of all available branches
           repo.shortBranches(function(err, branchData) {
             var gitBranches = branchData.split('\n').filter(function(x) {
               return x.length > 0;
             });
-
+            
+            // get a clean list of all commits on the current branch
+            // these will be added to the branch checker, which is used to
+            // validate requests to view trees at specific commits
+            // NOTE: this is different from the call used to collect commits
+            // for display in the "commits" tab in the UI
             repo.logPretty(branch, function(err, commits) {
               if (err) console.log(err);
               
@@ -182,12 +186,14 @@ module.exports = {
 
               var branches = _.union( gitBranches , commits );
 
-              console.log('BRANCH: ' + branch );
-              console.log('BRANCHES: ' + branches);
+              debug.git('BRANCH: ' + branch );
+              debug.git('BRANCHES: ' + branches);
 
               // by checking our list of branches, we prevent remote code execs
               if (branches.indexOf( branch ) === -1) return next();
-
+              
+              // browse the tree at the specific "branch" (can be a real branch,
+              // OR it can be a commit sha )
               repo.lsTree(branch, function(err, treeData) {
                 if (err) { console.log(err); }
 
@@ -206,12 +212,14 @@ module.exports = {
                 tree = _.filter( tree , function(x) {
                   return x.name;
                 });
-
+                
+                // asynchronously collect the latest commit for each known file
+                // in the current view
                 async.map( tree , function( blob , cb ) {
+                  
+                  // get the latest commit (and its author, timestamp, and
+                  // message) from the git log
                   repo.logFilePretty(blob.name, function(err, commit) {
-                    if(!commit) {
-                      console.log("wtf no commit");
-                    }
                     var parts = commit.split(' ');
                     
                     blob.commit = {
@@ -220,10 +228,11 @@ module.exports = {
                       date: (new Date( parts[2] * 1000 )),
                       message: parts.slice( 3 ).join(' ')
                     };
+                    
                     cb(err , blob);
                   });
                 }, function(err, completedTree) {
-
+                  
                   function compareByName(a, b) {
                     if (a.name < b.name) return -1;
                     if (a.name > b.name) return 1;
@@ -234,18 +243,21 @@ module.exports = {
                     if (a.type === 'blob') return 1;
                     return 0;
                   }
-
+                  
                   // sort by name first
                   completedTree.sort(function(a, b) {
                     if (a.type === b.type) return compareByName(a, b);
                     return compareByType(a, b);
                   });
 
+                  // collect the README file if it exists
                   repo.show(branch, "README.md", function(err, readme){
                     if (readme) {
                       project.readme = req.app.locals.marked(readme);
                     }
 
+                    // collect a clean list of branches
+                    // TODO: this is a duplicate of an existing call above?
                     repo.shortBranches(function(err, branchData) {
                       var branches = branchData.split('\n').map(function(x) {
                         return x.trim();
@@ -255,8 +267,10 @@ module.exports = {
                       });
                       
                       // TODO: eliminate double calls
-                      repo.log(function(err, commits) {
-
+                      // get the log of commits on this current branch / commit
+                      repo.branchLog(branch, function(err, commits) {
+                        
+                        // find a corresponding User based on the commit email
                         async.map( commits , function( commit , done ) {
                           Account.lookup( commit.author , function(err, author) {
                             commit._author = author;
