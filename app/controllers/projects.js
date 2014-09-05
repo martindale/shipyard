@@ -179,6 +179,7 @@ module.exports = {
         var commits = [];
         var files = [];
         var flags = {};
+        var graph;
         
         async.waterfall([
           function(next) {
@@ -253,7 +254,7 @@ module.exports = {
             // collect the README file if it exists
             repo.show(branch, "README.md", next);
           },
-          function(readme, next){
+          function(readme, next) {
             if (readme) {
               project.readme = req.app.locals.marked(readme);
             }
