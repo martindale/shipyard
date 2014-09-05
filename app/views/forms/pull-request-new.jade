@@ -1,0 +1,21 @@
+form(action="/#{original._owner.slug}/#{original.slug}/pulls", method="post")
+  input(type="text", name="originalID", value="#{original._id}")
+  input(type="text", name="originalSlug", value="#{original._owner.slug}/#{original.slug}")
+  
+  input(type="text", name="fromBranch", value="#{fromBranch}")
+  input(type="text", name="toBranch", value="#{toBranch}")
+
+  .form-group
+    label(for="name") Name
+    input.form-control(type="text", name="name", placeholder="General Description of the Pull Request")
+  .form-group
+    label(for="description") Description
+    textarea.form-control(type="text", name="description", placeholder="Technical details", rows="5")
+    
+  .form-group
+    each change in changes
+      - var commit = change
+      - var project = original
+      include ../partials/commit-row
+
+  button.btn.btn-primary.pull-right(type="submit") Create &raquo;

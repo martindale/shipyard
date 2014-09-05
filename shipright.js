@@ -2,8 +2,9 @@
 // TODO: evaluate strict mode
 require('debug-trace')({ always: process.env.SHIPRIGHT_TRACE });
 debug = {
-  http: require('debug')('http'),
-  git: require('debug')('git')
+  http:   require('debug')('http'),
+  git:    require('debug')('git'),
+  marked: require('debug')('marked')
 };
 
 var fs = require('fs');
@@ -103,12 +104,16 @@ app.locals.marked = function( inputString , context ) {
     if (references) {
       references.forEach(function(id) {
         var query = { _project: context.project._id , id: id.slice(1) };
-        console.log(query);
+        
+        debug.marked(query);
+        
         Issue.findOne( query ).exec(function(err, issue) {
           if (err || !issue) { return; }
 
           var list = issue._references.map(function(x) { return x._id; });
-          console.log(list);
+          
+          debug.marked(list);
+          
           if (issue._references.map(function(x) { return x._issue.toString(); }).indexOf( context.issue._id.toString() ) < 0) {
             issue._references.push({
                 _issue: context.issue._id
@@ -290,32 +295,35 @@ app.get('/logout', function(req, res, next) {
   res.redirect('/');
 });
 
-app.get('/projects',                          projects.list );
+// I HATE ROUTING.
+// TODO: replace all manual routing with Maki.
+
+app.get('/projects',                                  projects.list );
 app.get('/projects/new', client.can('authenticate') , projects.createForm );
 app.post('/projects',    client.can('authenticate') , projects.create );
 
-app.get('/:actorSlug/:projectSlug',                              setupRepo, projects.view );
-app.get('/:actorSlug/:projectSlug/trees/:branchName(*)',            setupRepo, projects.view );
-app.get('/:actorSlug/:projectSlug/issues',                       setupRepo, issues.list );
-app.get('/:actorSlug/:projectSlug/issues/:issueID',              setupRepo, issues.view );
-app.get('/:actorSlug/:projectSlug/issues/new',                   setupRepo, issues.createForm );
+app.get('/:actorSlug/:projectSlug',                                      setupRepo, projects.view );
+app.get('/:actorSlug/:projectSlug/trees/:branchName(*)',                 setupRepo, projects.view );
+app.get('/:actorSlug/:projectSlug/issues',                               setupRepo, issues.list );
+app.get('/:actorSlug/:projectSlug/issues/:issueID',                      setupRepo, issues.view );
+app.get('/:actorSlug/:projectSlug/issues/new',                           setupRepo, issues.createForm );
 app.post('/:actorSlug/:projectSlug/issues', client.can('authenticate') , setupRepo, issues.create );
 
-app.get('/:actorSlug/:projectSlug/diffs',                        setupRepo, issues.createForm );
-app.get('/:actorSlug/:projectSlug/diffs/:fromBranch%E2%80%A6:upstreamUniqueSlug(*)?', client.can('authenticate') , setupRepo, issues.diffForm );
+app.get('/:actorSlug/:projectSlug/diffs',                                                                          setupRepo,               issues.createForm );
+app.get('/:actorSlug/:projectSlug/diffs/:fromBranch%E2%80%A6:upstreamUniqueSlug(*)?', client.can('authenticate') , setupRepo,               issues.diffForm );
+app.post('/:actorSlug/:projectSlug/pulls',                                            client.can('authenticate') , setupRepo, setupProject, issues.createPullRequest );
 
-app.post('/:actorSlug/:projectSlug/issues/:issueID/comments', client.can('authenticate') , setupRepo, issues.addComment );
+app.post('/:actorSlug/:projectSlug/issues/:issueID/comments',                         client.can('authenticate') , setupRepo,               issues.addComment );
 
-//app.get('/:actorSlug/:projectSlug.git/info/refs',                setupRepo , projects.git.refs );
-app.get('/:actorSlug/:projectSlug/blobs/:branchName/:filePath(*)',  setupRepo , projects.viewBlob );
-app.get('/:actorSlug/:projectSlug/commits/:commitID',            setupRepo , projects.viewCommit );
+app.get('/:actorSlug/:projectSlug/blobs/:branchName/:filePath(*)', setupRepo , projects.viewBlob );
+app.get('/:actorSlug/:projectSlug/commits/:commitID',              setupRepo , projects.viewCommit );
 
 app.get('/people', people.list);
 
 app.get('/:organizationSlug', organizations.view );
 app.get('/:usernameSlug',     people.view );
 
-app.post('/:usernameSlug/emails', client.can('authenticate') , people.addEmail );
+app.post('/:usernameSlug/emails',   client.can('authenticate') , people.addEmail );
 app.delete('/:usernameSlug/emails', client.can('authenticate') , people.removeEmail );
 
 function setupRepo(req, res, next) {
@@ -324,7 +332,7 @@ function setupRepo(req, res, next) {
   next();
 }
 
-function setupPushover(req, res, next) {
+function setupProject(req, res, next) {
   req.pause();
   Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
     if (err) { debug.http(err); }
@@ -353,15 +361,15 @@ app.repos.on('fetch', function (fetch) {
 });
 
 var gitAcceptRegex = new RegExp('^application/x-git(.*)');
-var gitAgentRegex = new RegExp('^git/(.*)');
-app.get('/:actorSlug/:projectSlug*', setupRepo , setupPushover , function(req, res, next) {
+var gitAgentRegex  = new RegExp('^git/(.*)');
+app.get('/:actorSlug/:projectSlug*', setupRepo , setupProject , function(req, res, next) {
   if (!gitAgentRegex.exec( req.headers['user-agent'] ) ) return next();
-  debug.git('handling get...');
+  debug.git('pushover handling get...');
   app.repos.handle(req, res);
 });
-app.post('/:actorSlug/:projectSlug*', setupRepo , setupPushover , client.can('git push') , function(req, res, next) {
+app.post('/:actorSlug/:projectSlug*', setupRepo , setupProject , client.can('git push') , function(req, res, next) {
   if (!gitAcceptRegex.exec( req.headers.accept ) ) return next();
-  debug.git('handling post...');
+  debug.git('pushover handling post...');
   app.repos.handle(req, res);
 });
 
@@ -379,7 +387,7 @@ var maki = {
   debug: true ,
   app: app ,
   routes: {
-    '/projects': 'ff'
+    '/projects': null // not really maki, just use a null handler
   },
   config: {
     redis: config.redis

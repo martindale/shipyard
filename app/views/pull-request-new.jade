@@ -1,0 +1,8 @@
+extends layout
+
+block content
+
+  h1 New Pull Request
+  //-p You'll be requesting that #{upstream._owner.slug}/#{upstream.slug} pull in #{changes.length} commits from #{original.slug}.
+
+  include forms/pull-request-new

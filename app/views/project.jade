@@ -130,9 +130,8 @@ block content
             h2 Docks
             table.table
               each dock in docks
-                tr
-                  td #{dock.id}
-                  td #{dock.title}
+                - var issue = dock
+                include partials/issue
                   
           .tab-pane#network
             h2 Network

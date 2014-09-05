@@ -54,6 +54,22 @@ module.exports = {
       });
     });
   },
+  createPullRequest: function(req, res, next) {
+    var request = new Issue({
+      name: req.param('name'),
+      description: req.param('description'),
+      type: 'dock',
+      _project: req.project._id,
+      _creator: req.user._id
+    });
+    
+    request.save(function(err) {
+      if (err) console.log(err);
+      
+      res.redirect('/' +  req.param('uniqueSlug') + '/docks');
+      
+    });
+  },
   diffForm: function(req, res, next) {
     Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
       if (!project) return next();
@@ -64,18 +80,28 @@ module.exports = {
       var repo = git( project.path );
       
       if (req.param('upstreamUniqueSlug')) {
-        
         parts = req.param('upstreamUniqueSlug').split('/');
-        
-        // TODO: default to upstream if no specific diff passed
-        collectors.push( function(done) {
-          //if (!req.param('upstreamUniqueSlug') && !project._upstream) return done(404);
-          Project.lookup({ uniqueSlug: parts.slice(0, 2).join('/') }, function(err, upstream) {
-            console.log(err, upstream);
-            done(err, upstream)
-          });
-        } );
       }
+        
+      // push a collector that selects an appropriate pull request destination
+      collectors.push( function(done) {
+        var query = {};
+        
+        // determine target of the pull request
+        // falls back to pull requesting to local
+        if (parts.length >= 2) {
+          query = { uniqueSlug: parts.slice(0, 2).join('/') };
+        } else if (project._upstream) {
+          query = { _id: project._upstream._id }
+        } else {
+          query = { _id: project._id }
+        }
+
+        Project.lookup( query , function(err, upstream) {
+          console.log(err, upstream);
+          done(err, upstream)
+        });
+      } );
       
       async.parallel( collectors , function(err, results) {
         if (err) return next(err);
@@ -89,22 +115,32 @@ module.exports = {
         
         repo.remote.add( upstreamUniqueSlug , upstream.path , function(err) {
           if (err) { console.log(err); }
-          
-          repo.diffBranches( fromBranch , upstreamUniqueSlug + '/' + toBranch , function(err, changes) {
-            if (err) { console.log(err , changes); }
-              
-            async.map( changes , function( commit , done ) {
-              Account.lookup( commit.author , function(err, author) {
-                commit._author = author;
-                done( err , commit );
-              });
-            }, function(err, results) {
-              res.render('pull-request-new', {
-                original: project,
-                upstream: upstream,
-                fromBranch: fromBranch,
-                toBranch: toBranch,
-                changes: changes
+            
+          // must fetch before diff works
+          // I didn't realize this until after I'd switched remote names,
+          // thinking that we couldn't diff because the mongoID looks similar to
+          // a commit hash... I was wrong, but haven't refactored this yet.
+          // OTOH perhaps diffs should be run against the server's http route...
+          // TODO: consider switching back to _id as the remote name
+          repo.fetch( upstreamUniqueSlug , function(err) {
+            if (err) console.log(err);
+            
+            repo.diffBranches( fromBranch , upstreamUniqueSlug + '/' + toBranch , function(err, changes) {
+              if (err) { console.log(err , changes); }
+                
+              async.map( changes , function( commit , done ) {
+                Account.lookup( commit.author , function(err, author) {
+                  commit._author = author;
+                  done( err , commit );
+                });
+              }, function(err, results) {
+                res.render('pull-request-new', {
+                  original: project,
+                  upstream: upstream,
+                  fromBranch: fromBranch,
+                  toBranch: toBranch,
+                  changes: changes
+                });
               });
             });
           });
