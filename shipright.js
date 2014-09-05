@@ -56,6 +56,7 @@ marked.setOptions({
       return require('highlight.js').highlightAuto(code).value;
     }
 });
+var slugify = require('mongoose-slug/node_modules/speakingurl');
 
 var sessionStore = new RedisStore();
 
@@ -104,14 +105,11 @@ app.locals.marked = function( inputString , context ) {
     if (references) {
       references.forEach(function(id) {
         var query = { _project: context.project._id , id: id.slice(1) };
-        
         debug.marked(query);
-        
         Issue.findOne( query ).exec(function(err, issue) {
           if (err || !issue) { return; }
 
           var list = issue._references.map(function(x) { return x._id; });
-          
           debug.marked(list);
           
           if (issue._references.map(function(x) { return x._issue.toString(); }).indexOf( context.issue._id.toString() ) < 0) {
@@ -131,14 +129,27 @@ app.locals.marked = function( inputString , context ) {
     var mentions = parsed.match(/(\@)(\w+)/g);
     parsed = parsed.replace(/(\@)(\w+)/g, '<a href="/$2">$1$2</a>');
     if (mentions) {
-      mentions.forEach(function(username) {
+      
+      console.log(mentions);
+      
+      mentions.map(function(x) {
+        return slugify(x);
+      }).forEach(function(username) {
         Actor.findOne({ slug: username }).exec(function(err, actor) {
-          // TODO: notify user
-          // TODO: notification system
+          if (err) console.log(err);
+          
+          console.log(actor);
+          maki.queue.enqueue('test', {
+            target: actor._id,
+            issue: context.issue._id
+          }, function(err, job) {
+            
+            console.log(err , job );
+            
+          });
         });
       });
     }
-
   }
   return parsed;
 };
@@ -378,6 +389,7 @@ app.get('*', function(req, res) {
 });
 
 var WebSocketServer = require('maki-service-websockets');
+var Queue           = require('maki-queue');
 
 // Maki stub
 // TODO: implement proper Maki
@@ -397,7 +409,13 @@ var maki = {
 };
 maki.httpd = require('http').createServer( maki.app );
 maki.socks = new WebSocketServer();
+maki.queue = new Queue({
+  database: {
+    name: config.databaseName
+  }
+});
 
 maki.socks.bind( maki );
+maki.queue.bind( maki );
 
 maki.httpd.listen( config.http.port );
