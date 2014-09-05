@@ -3,10 +3,5 @@ extends layout
 block content
 
   h1 Create New Issue
-  
-  if (upstream)
-    - project = upstream
 
-    include forms/issue-new
-  else
-    include forms/issue-new
+  include forms/issue-new

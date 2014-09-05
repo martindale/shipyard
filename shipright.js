@@ -302,7 +302,7 @@ app.get('/:actorSlug/:projectSlug/issues/new',                   setupRepo, issu
 app.post('/:actorSlug/:projectSlug/issues', client.can('authenticate') , setupRepo, issues.create );
 
 app.get('/:actorSlug/:projectSlug/diffs',                        setupRepo, issues.createForm );
-app.get('/:actorSlug/:projectSlug/diffs/:fromBranch%E2%80%A6:upstreamProjectSlug(*)?', setupRepo, issues.createForm );;
+app.get('/:actorSlug/:projectSlug/diffs/:fromBranch%E2%80%A6:upstreamUniqueSlug(*)?', client.can('authenticate') , setupRepo, issues.diffForm );
 
 app.post('/:actorSlug/:projectSlug/issues/:issueID/comments', client.can('authenticate') , setupRepo, issues.addComment );
 

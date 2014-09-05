@@ -26,7 +26,7 @@ block content
       
       pre.hide #{project._id}
 
-      a.btn.btn-success(href="/#{project._owner.slug}/#{project.slug}/diffs/#{branch}…#{((project._upstream) ? project._upstream.slug + '/master' : '')}", title="Start a Change Proposal")
+      a.btn.btn-success(href="/#{project._owner.slug}/#{project.slug}/diffs/#{branch}…#{((project._upstream) ? project._upstream._owner.slug + '/' + project._upstream.slug + '/master' : '')}", title="Start a Change Proposal")
         i.fa.fa-refresh
       .dropdown
         a.btn.btn-default(href="/#{project._owner.slug}/#{project.slug}/branches", data-toggle="dropdown") 
