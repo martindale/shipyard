@@ -357,7 +357,7 @@ function setupProject(req, res, next) {
   });
 }
 
-var pushover = require('./lib/pushover');
+var pushover = require('pushover');
 app.repos = pushover( config.git.data.path );
 
 app.repos.on('push', function (push) {
