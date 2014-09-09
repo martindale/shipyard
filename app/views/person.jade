@@ -48,6 +48,15 @@ block content
         each project in projects
           li.list-group-item
             include partials/project
+      h2 
+        i.fa.fa-flask
+        | SSH Keys
+        a(href="/#{user.slug}/keys/new")
+          button.btn.btn-default Add &raquo;
+      ul.list-group
+        each key in keys
+          li.list-group-item
+            include partials/ssh-key
 
   if (user && person._id.toString() === user._id.toString())
     script.

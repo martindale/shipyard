@@ -1,0 +1,9 @@
+form(action="/#{user.slug}/keys", method="post")
+  .form-group
+    label(for="name") Name
+    input.form-control(type="text", name="name", placeholder="Name to identify this key")
+  .form-group
+    label(for="description") Public Key
+    textarea.form-control(type="text", name="key")
+
+  button.btn.btn-primary.pull-right(type="submit") Add key &raquo;

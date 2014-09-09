@@ -18,12 +18,27 @@ module.exports = {
           return x;
         });
 
-        res.provide( err, { 
+        if (person._id.toString() == req.user._id.toString()) {
+          PublicKey.find({_owner: req.user._id}).exec(function(err, keys) {
+            res.provide( err, {
+              person: person
+              , projects: projects
+              , keys: keys
+            }, {
+              template: 'person'
+            });
+          });
+        }
+        else {
+          res.provide( err, {
             person: person
-          , projects: projects
-        }, {
-          template: 'person'
-        });
+            , projects: projects
+            , keys: []
+          }, {
+            template: 'person'
+          });
+        }
+        
       });
     });
   },

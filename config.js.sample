@@ -15,9 +15,13 @@ module.exports = {
   , cookieSecret: 'this can be any random string, you can even use this one. :)'
   , databaseName: 'shipright'
   , git: {
-      data: {
-        path: 'data' // can, and should, be a resilient fs
-      }
+        data: {
+          path: 'data' // can, and should, be a resilient fs
+        }
+      , ssh: {
+            user: "git"
+          , keyPath: "/Users/git/.ssh/authorized_keys"
+        }
     }
   , redis: {
       host: 'localhost',
