@@ -42,7 +42,11 @@
     "pretty-diff": "git://github.com/martindale/pretty-diff#shipright",
     "pushover": "git://github.com/martindale/pushover#shipright",
     "redis": "~0.10.1",
-    "underscore": "~1.6.0"
+    "underscore": "~1.6.0",
+    "atob": "^1.1.2",
+    "kexec": "^0.2.0",
+    "lockfile": "^1.0.0",
+    "shellwords": "^0.1.0"
   },
   "devDependencies": {
     "debug": "^2.0.0",
