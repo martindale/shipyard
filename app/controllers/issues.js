@@ -1,3 +1,5 @@
+var crypto = require('crypto');
+
 module.exports = {
   list: function(req, res, next) {
     Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
@@ -54,20 +56,100 @@ module.exports = {
       });
     });
   },
+  edit: function(req, res, next) {
+    Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
+      if (!project) return next();
+
+      Issue.findOne({ _project: project._id, id: req.param('issueID') }).exec(function(err, issue) {
+        if (!issue) { return next(); }
+          
+        // TODO: only merge when merge required
+        var repo = git( project.path );
+        
+        var downstreamParts = issue.data.from.split('/');
+        var toParts         = issue.data.to.split('/');
+        
+        var fromPath = downstreamParts.slice(0, 2).join('/');
+        Project.lookup({ uniqueSlug: fromPath }, function(err, downstream) {
+          
+          console.log('project: ', project);
+          console.log('executing merge ' , fromPath + '/' + downstreamParts[2] );
+          
+          var tmpPath = '/tmp/' + crypto.randomBytes(20).toString('hex');
+          
+          console.log('cloning ' , project.path , tmpPath );
+          
+          git.clone( tmpPath , project.path , function(err) {
+            if (err) console.log(err);
+            
+            var tmp = git( tmpPath );
+            tmp.remote.add('downstream', downstream.path , function(err) {
+              if (err) console.log(err);
+              
+              tmp.fetch('downstream', function(err) {
+                if (err) console.log(err);
+                
+                console.log('fetched...');
+                
+                tmp.checkout( toParts[ 2 ] , function(err) {
+                  if (err) console.log(err);
+                  
+                  console.log('checked out...');
+                  
+                  tmp.merge( 'downstream/' + downstreamParts[ 2 ] , ['--no-ff'], function(err) {
+                    if (err) console.log(err);
+                    
+                    console.log('merged...');
+                    
+                    // prevent fast forwards
+                    tmp.push('origin', toParts[ 2 ] , [] , function(err, success) {
+                      if (err) console.log(err);
+                      
+                      console.log('pushed...', success);
+                      
+                      ['status'].forEach(function(field) {
+                        // TODO: force use of req.body / req.params?
+                        // otherwise, form control seems to utilize query strings / request body
+                        issue[ field ] = req.body[ field ];
+                      });
+                      issue.save(function(err) {
+                        if (err) console.log(err);
+                        res.redirect( req.path );
+                      });
+                      
+                    });
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
+      
+    });
+  },
   createPullRequest: function(req, res, next) {
+    var requiredFields = [
+      'originalSlug',
+      'fromBranch',
+      'toBranch'
+    ];
+    
     var request = new Issue({
       name: req.param('name'),
       description: req.param('description'),
       type: 'dock',
       _project: req.project._id,
-      _creator: req.user._id
+      _creator: req.user._id,
+      data: {
+        from: req.param('originalSlug') + '/' + req.param('fromBranch'),
+        to: req.param('uniqueSlug') + '/' + req.param('toBranch')
+      }
     });
     
     request.save(function(err) {
       if (err) console.log(err);
-      
-      res.redirect('/' +  req.param('uniqueSlug') + '/docks');
-      
+      res.redirect('/' +  req.param('uniqueSlug') + '/issues/ ' + request.id );
     });
   },
   diffForm: function(req, res, next) {

@@ -27,6 +27,21 @@ block content
 
   p !{marked( issue.description , resource )}
 
+  if (issue.type === 'dock')
+    hr
+    
+    h4 from #{issue.data.from} to #{issue.data.to}
+  
+    //- TODO: convert this technique (hiding method in input var) into a module
+    // bury the unsupported form methods in a hidden form value (auto-set by
+    // the form generator's context) and then auto-interpret it in a server-side
+    // middleware.  this is so very maki.
+    form(method="post")
+      input(type="hidden", name="method", value="patch")
+    
+      button.btn.btn-warning(name="status", value="closed") &times;
+      button.btn.btn-success(name="status", value="merged") Merge
+
   hr
 
   h3 References

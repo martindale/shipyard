@@ -22,7 +22,10 @@ block content
         li
           a(href="#contributors") #{contributors.length} contributors
 
-      pre http://#{config.http.host}:#{config.http.port}/#{project._owner.slug}/#{project.slug}
+      //- TODO: switch this to auto-selected protocol
+      //- e.g., https for http (if https only?)
+      //- or git when implemented
+      pre http://#{config.http.host}#{((config.http.port == 80) ? '' : ':' + config.http.port )}/#{project._owner.slug}/#{project.slug}
       
       pre.hide #{project._id}
 

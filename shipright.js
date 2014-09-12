@@ -252,6 +252,18 @@ app.use(function(req, res, next) {
   next();
 });
 
+var makiFormHandler = function(req, res, next) {
+  var supportedMethods = ['patch'];
+  var proposedMethod = (req.param('method')) ? req.param('method').toLowerCase() : null;
+  if (supportedMethods.indexOf( proposedMethod ) >= 0) {
+    req.method = req.param('method').toUpperCase();
+    // TODO: force use of req.body / req.params?
+    // otherwise, form control seems to utilize query strings / request body
+  }
+  next();
+}
+app.use( makiFormHandler );
+
 app.get('/', pages.index );
 
 app.get('/auth/google',
@@ -281,7 +293,11 @@ app.get('/login', function(req, res) {
 
 /* when a POST request is made to '/register'... */
 app.post('/register', function(req, res, next) {
-  Account.register(new Account({ email : req.body.email, username : req.body.username }), req.body.password, function(err, user) {
+  Account.register(new Account({
+    email : req.body.email,
+    username : req.body.username,
+    emails: [ req.body.emails ]
+  }), req.body.password, function(err, user) {
     if (err) {
       console.log(err);
       return res.render('register', { user : user });
@@ -320,6 +336,10 @@ app.get('/:actorSlug/:projectSlug',                                      setupRe
 app.get('/:actorSlug/:projectSlug/trees/:branchName(*)',                 setupRepo, projects.view );
 app.get('/:actorSlug/:projectSlug/issues',                               setupRepo, issues.list );
 app.get('/:actorSlug/:projectSlug/issues/:issueID',                      setupRepo, issues.view );
+
+//app.post('/:actorSlug/:projectSlug/issues/:issueID', function() { console.log('fff'); },                    setupRepo, issues.edit );
+app.patch('/:actorSlug/:projectSlug/issues/:issueID',                    setupRepo, issues.edit );
+
 app.get('/:actorSlug/:projectSlug/issues/new',                           setupRepo, issues.createForm );
 app.post('/:actorSlug/:projectSlug/issues', client.can('authenticate') , setupRepo, issues.create );
 
