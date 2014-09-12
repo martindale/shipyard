@@ -11,7 +11,7 @@ module.exports = {
       port: process.env.SHIPRIGHT_HTTP_PORT || 9200,
       host: process.env.SHIPRIGHT_HTTP_HOST || 'localhost'
     }
-  , callbackURL: "http://yourapp.com:9200" // set this to the public address of your app
+  , callbackURL: 'http://yourapp.com:9200' // set this to the public address of your app
   , cookieSecret: 'this can be any random string, you can even use this one. :)'
   , databaseName: 'shipright'
   , git: {
@@ -19,8 +19,8 @@ module.exports = {
           path: 'data' // can, and should, be a resilient fs
         }
       , ssh: {
-            user: "git"
-          , keyPath: "/Users/git/.ssh/authorized_keys"
+            user: process.env.SHIPRIGHT_SSH_USER || 'git'
+          , keyPath: process.env.SHIPRIGHT_KEY_PATH || process.env.HOME + '/.ssh/authorized_keys'
         }
     }
   , redis: {
