@@ -15,6 +15,7 @@
   "readmeFilename": "README.md",
   "dependencies": {
     "async": "~0.7.0",
+    "atob": "^1.1.2",
     "body-parser": "~1.0.2",
     "connect-redis": "~1.4.7",
     "connect-roles": "^3.0.3",
@@ -26,6 +27,8 @@
     "highlight.js": "~8.0.0",
     "jade": "^1.6.0",
     "less-middleware": "~0.1.14",
+    "lockfile": "^1.0.0",
+    "maki": "git://github.com/martindale/maki#master",
     "maki-jsonrpc": "^0.1.1",
     "maki-mongoose-hooks": "^0.1.0",
     "maki-queue": "0.0.1",
@@ -42,10 +45,8 @@
     "pretty-diff": "git://github.com/martindale/pretty-diff#shipright",
     "pushover": "git://github.com/martindale/pushover#shipright",
     "redis": "~0.10.1",
-    "underscore": "~1.6.0",
-    "atob": "^1.1.2",
-    "lockfile": "^1.0.0",
-    "shellwords": "^0.1.0"
+    "shellwords": "^0.1.0",
+    "underscore": "~1.6.0"
   },
   "devDependencies": {
     "debug": "^2.0.0",
