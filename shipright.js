@@ -82,6 +82,7 @@ Comment           = require('./app/models/Comment').Comment;
 Issue             = require('./app/models/Issue').Issue;
 Organization      = require('./app/models/Organization').Organization;
 Project           = require('./app/models/Project').Project;
+PublicKey         = require('./app/models/PublicKey').PublicKey;
 
 Actor             = require('./app/models/Actor').Actor;
 Activity          = require('./app/models/Activity').Activity;
@@ -91,6 +92,8 @@ var people        = require('./app/controllers/people');
 var projects      = require('./app/controllers/projects');
 var organizations = require('./app/controllers/organizations');
 var issues        = require('./app/controllers/issues');
+var keys          = require('./app/controllers/keys');
+
 
 app.locals.pretty = true;
 app.locals.moment = moment;
@@ -331,8 +334,11 @@ app.get('/:actorSlug/:projectSlug/commits/:commitID',              setupRepo , p
 
 app.get('/people', people.list);
 
-app.get('/:organizationSlug', organizations.view );
-app.get('/:usernameSlug',     people.view );
+app.get('/:organizationSlug',      organizations.view );
+app.get('/:usernameSlug',          people.view );
+app.get('/:usernameSlug/keys/new', keys.createForm );
+app.post('/:usernameSlug/keys',    keys.create );
+
 
 app.post('/:usernameSlug/emails',   client.can('authenticate') , people.addEmail );
 app.delete('/:usernameSlug/emails', client.can('authenticate') , people.removeEmail );
