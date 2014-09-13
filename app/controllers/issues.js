@@ -95,8 +95,16 @@ module.exports = {
                   if (err) console.log(err);
                   
                   console.log('checked out...');
+                  //var msg = 'Merge branch \''+downstreamParts[ 2 ]+'\' of ' + config.http.host + ':' + fromPath + ' into ' + ;
                   
-                  tmp.merge( 'downstream/' + downstreamParts[ 2 ] , ['--no-ff'], function(err) {
+                  var msg = 'Merge pull request #' + issue.id + ' from ' + issue.data.from;
+                  var author = req.user.username + ' <' + req.user.email + '>' ;
+                  
+                  tmp.merge( 'downstream/' + downstreamParts[ 2 ] , [
+                    '--no-ff',
+                    '-m "'+msg+'"',
+                    '--author='+author
+                  ], function(err) {
                     if (err) console.log(err);
                     
                     console.log('merged...');
