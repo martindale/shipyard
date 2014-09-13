@@ -100,9 +100,12 @@ module.exports = {
                   var msg = 'Merge pull request #' + issue.id + ' from ' + issue.data.from;
                   var author = req.user.username + ' <' + req.user.email + '>' ;
                   
+                  console.log('message will be ', msg );
+                  console.log('author will be ', author );
+                  
                   tmp.merge( 'downstream/' + downstreamParts[ 2 ] , [
-                    '--no-ff',
                     '-m "'+msg+'"',
+                    '--no-ff',
                     '--author='+author
                   ], function(err) {
                     if (err) console.log(err);
