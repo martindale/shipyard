@@ -106,28 +106,32 @@ module.exports = {
                   tmp.merge( 'downstream/' + downstreamParts[ 2 ] , [
                     '-m "'+msg+'"',
                     '--no-ff',
-                    '--author='+author
                   ], function(err) {
                     if (err) console.log(err);
                     
                     console.log('merged...');
                     
-                    // prevent fast forwards
-                    tmp.push('origin', toParts[ 2 ] , [] , function(err, success) {
+                    tmp.changeAuthor( author , function(err) {
                       if (err) console.log(err);
                       
-                      console.log('pushed...', success);
+                      console.log('changed author...');
                       
-                      ['status'].forEach(function(field) {
-                        // TODO: force use of req.body / req.params?
-                        // otherwise, form control seems to utilize query strings / request body
-                        issue[ field ] = req.body[ field ];
-                      });
-                      issue.save(function(err) {
+                      tmp.push('origin', toParts[ 2 ] , [] , function(err, success) {
                         if (err) console.log(err);
-                        res.redirect( req.path );
+                        
+                        console.log('pushed...', success);
+                        
+                        ['status'].forEach(function(field) {
+                          // TODO: force use of req.body / req.params?
+                          // otherwise, form control seems to utilize query strings / request body
+                          issue[ field ] = req.body[ field ];
+                        });
+                        issue.save(function(err) {
+                          if (err) console.log(err);
+                          res.redirect( req.path );
+                        });
+                        
                       });
-                      
                     });
                   });
                 });
