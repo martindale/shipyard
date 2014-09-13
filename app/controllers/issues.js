@@ -72,12 +72,12 @@ module.exports = {
         var fromPath = downstreamParts.slice(0, 2).join('/');
         Project.lookup({ uniqueSlug: fromPath }, function(err, downstream) {
           
-          console.log('project: ', project);
-          console.log('executing merge ' , fromPath + '/' + downstreamParts[2] );
+          debug.git('project: ', project);
+          debug.git('executing merge ' , fromPath + '/' + downstreamParts[2] );
           
           var tmpPath = '/tmp/' + crypto.randomBytes(20).toString('hex');
           
-          console.log('cloning ' , project.path , tmpPath );
+          debug.git('cloning ' , project.path , tmpPath );
           
           git.clone( tmpPath , project.path , function(err) {
             if (err) console.log(err);
@@ -89,19 +89,19 @@ module.exports = {
               tmp.fetch('downstream', function(err) {
                 if (err) console.log(err);
                 
-                console.log('fetched...');
+                debug.git('fetched...');
                 
                 tmp.checkout( toParts[ 2 ] , function(err) {
                   if (err) console.log(err);
                   
-                  console.log('checked out...');
+                  debug.git('checked out...');
                   //var msg = 'Merge branch \''+downstreamParts[ 2 ]+'\' of ' + config.http.host + ':' + fromPath + ' into ' + ;
                   
                   var msg = 'Merge pull request #' + issue.id + ' from ' + issue.data.from;
                   var author = req.user.username + ' <' + req.user.email + '>' ;
                   
-                  console.log('message will be ', msg );
-                  console.log('author will be ', author );
+                  debug.git('message will be ', msg );
+                  debug.git('author will be ', author );
                   
                   tmp.merge( 'downstream/' + downstreamParts[ 2 ] , [
                     '-m "'+msg+'"',
@@ -109,17 +109,17 @@ module.exports = {
                   ], function(err) {
                     if (err) console.log(err);
                     
-                    console.log('merged...');
+                    debug.git('merged...');
                     
                     tmp.changeAuthor( author , function(err) {
                       if (err) console.log(err);
                       
-                      console.log('changed author...');
+                      debug.git('changed author...');
                       
                       tmp.push('origin', toParts[ 2 ] , [] , function(err, success) {
                         if (err) console.log(err);
                         
-                        console.log('pushed...', success);
+                        debug.git('pushed...', success);
                         
                         ['status'].forEach(function(field) {
                           // TODO: force use of req.body / req.params?
