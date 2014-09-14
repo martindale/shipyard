@@ -2,10 +2,10 @@ module.exports = {
   index: function(req, res, next) {
     async.parallel([
       function(done) {
-        Project.find().limit(10).populate('_owner').exec( done );
+        Project.find().limit( 50 ).populate('_owner').exec( done );
       },
       function(done) {
-        Activity.find().limit(10).sort('-_id').exec( done );
+        Activity.find().limit( 50 ).sort('-_id').exec( done );
       },
     ], function(err, results) {
       res.provide( err , {

@@ -11,7 +11,6 @@ module.exports = {
       if (err) { console.log(err); }
       if (!person) { return next(); }
 
-      console.log(person);
       Project.find({ _owner: person._actor }).lean().exec(function(err, projects) {
 
         projects = projects.map(function(x) {
@@ -19,13 +18,58 @@ module.exports = {
           return x;
         });
 
-        res.provide( err, { 
+        if (person._id.toString() == req.user._id.toString()) {
+          PublicKey.find({_owner: req.user._id}).exec(function(err, keys) {
+            res.provide( err, {
+              person: person
+              , projects: projects
+              , keys: keys
+            }, {
+              template: 'person'
+            });
+          });
+        }
+        else {
+          res.provide( err, {
             person: person
-          , projects: projects
-        }, {
-          template: 'person'
-        });
+            , projects: projects
+            , keys: []
+          }, {
+            template: 'person'
+          });
+        }
+        
       });
+    });
+  },
+  // TODO: build a proper profile edit (including deletion of emails)
+  // or, just use Maki.
+  addEmail: function(req, res, next) {
+    if (!req.param('email')) return next(400);
+    
+    People.findOneAndUpdate({
+      slug: req.param('usernameSlug')
+    }, {
+      $addToSet: {
+        emails: req.param('email')
+      }
+    }, function(err, person) {
+      if (err || !person) return next(err);
+      return res.redirect('/' + person.slug );
+    });
+  },
+  // TODO: build a proper profile edit (including deletion of emails)
+  // or, just use Maki.
+  removeEmail: function(req, res, next) {
+    People.findOneAndUpdate({
+      slug: req.param('usernameSlug')
+    }, {
+      $pull: {
+        emails: req.param('email')
+      }
+    }, function(err, person) {
+      if (err || !person) return next(err);
+      return res.status(200).end();
     });
   }
 }

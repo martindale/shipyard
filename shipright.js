@@ -1,4 +1,11 @@
-require('debug-trace')({ always: true })
+//'use strict'
+// TODO: evaluate strict mode
+require('debug-trace')({ always: process.env.SHIPRIGHT_TRACE });
+debug = {
+  http:   require('debug')('http'),
+  git:    require('debug')('git'),
+  marked: require('debug')('marked')
+};
 
 var fs = require('fs');
 
@@ -13,6 +20,34 @@ var passportLocalMongoose = require('passport-local-mongoose');
 var RedisStore = require('connect-redis')(express);
 var redis = require('redis');
 
+var RoleProvider = require('connect-roles');
+var client = new RoleProvider({
+  failureHandler: function(req, res, action) {
+    res.status(403);
+    res.format({
+      json: function() {
+        res.send({ status: error , message: 'Access denied '});
+      },
+      html: function() {
+        res.render('access-denied', { action: action });
+      }
+    });
+  }
+});
+client.use('authenticate', function(req, action) {
+  if (!req.user || !req.user._id) return false;
+  return true;
+});
+client.use('git push', function(req, action) {
+  if (!req.project) return false;
+  
+  // temporary
+  return true;
+  
+  if (!req.user) return false;
+  if (req.user._actor.toString() === project._actor.toString()) return true;
+});
+
 var moment = require('moment');
 var marked = require('marked');
 marked.setOptions({
@@ -21,6 +56,7 @@ marked.setOptions({
       return require('highlight.js').highlightAuto(code).value;
     }
 });
+var slugify = require('mongoose-slug/node_modules/speakingurl');
 
 var sessionStore = new RedisStore();
 
@@ -39,13 +75,14 @@ if (!fs.existsSync( config.git.data.path )) {
 // TODO: should we do this?
 _     = require('underscore');
 async = require('async');
-//git   = require('gitty'); // thanks, @gordonwritescode!
+git   = require('./lib/gitty'); // thanks, @gordonwritescode!
 
 Account = People  = require('./app/models/Account').Account;
 Comment           = require('./app/models/Comment').Comment;
 Issue             = require('./app/models/Issue').Issue;
 Organization      = require('./app/models/Organization').Organization;
 Project           = require('./app/models/Project').Project;
+PublicKey         = require('./app/models/PublicKey').PublicKey;
 
 Actor             = require('./app/models/Actor').Actor;
 Activity          = require('./app/models/Activity').Activity;
@@ -55,6 +92,8 @@ var people        = require('./app/controllers/people');
 var projects      = require('./app/controllers/projects');
 var organizations = require('./app/controllers/organizations');
 var issues        = require('./app/controllers/issues');
+var keys          = require('./app/controllers/keys');
+
 
 app.locals.pretty = true;
 app.locals.moment = moment;
@@ -69,12 +108,13 @@ app.locals.marked = function( inputString , context ) {
     if (references) {
       references.forEach(function(id) {
         var query = { _project: context.project._id , id: id.slice(1) };
-        console.log(query);
+        debug.marked(query);
         Issue.findOne( query ).exec(function(err, issue) {
           if (err || !issue) { return; }
 
           var list = issue._references.map(function(x) { return x._id; });
-          console.log(list);
+          debug.marked(list);
+          
           if (issue._references.map(function(x) { return x._issue.toString(); }).indexOf( context.issue._id.toString() ) < 0) {
             issue._references.push({
                 _issue: context.issue._id
@@ -92,20 +132,33 @@ app.locals.marked = function( inputString , context ) {
     var mentions = parsed.match(/(\@)(\w+)/g);
     parsed = parsed.replace(/(\@)(\w+)/g, '<a href="/$2">$1$2</a>');
     if (mentions) {
-      mentions.forEach(function(username) {
+      
+      console.log(mentions);
+      
+      mentions.map(function(x) {
+        return slugify(x);
+      }).forEach(function(username) {
         Actor.findOne({ slug: username }).exec(function(err, actor) {
-          // TODO: notify user
-          // TODO: notification system
+          if (err) console.log(err);
+          
+          console.log(actor);
+          maki.queue.enqueue('test', {
+            target: actor._id,
+            issue: context.issue._id
+          }, function(err, job) {
+            
+            console.log(err , job );
+            
+          });
         });
       });
     }
-
   }
   return parsed;
 };
 
 app.use(require('less-middleware')({ 
-    debug: true
+    debug: false
   , src: __dirname + '/private'
   , dest: __dirname + '/public'
 }));
@@ -124,14 +177,11 @@ app.use( require('express-session')({
   , store: sessionStore
 }));
 
-/* Configure the registration and login system */
-app.use(passport.initialize());
-app.use(passport.session());
-
 app.set('view engine', 'jade');
 app.set('views', 'app/views');
 
-passport.use(new LocalStrategy( Account.authenticate() ) );
+// TODO: utilize confluence, sensemaker
+passport.use(Account.createStrategy());
 passport.use(new GoogleStrategy({
     returnURL: 'http://eric.bp:9200/auth/google/callback',
     realm: 'http://eric.bp:9200/',
@@ -145,9 +195,7 @@ passport.use(new GoogleStrategy({
         ]
     }).exec(function(err, account) {
       if (err) { return done(err); }
-      if (!account) {
-        var account = new Account();
-      }
+      if (!account) var account = new Account();
 
       if (account.profiles.google.map(function(x) { return x.id; }).indexOf( identifier ) < 0) {
         account.profiles.google.push({
@@ -169,12 +217,18 @@ passport.use(new GoogleStrategy({
 passport.serializeUser( Account.serializeUser() );
 passport.deserializeUser( Account.deserializeUser() );
 
+/* Configure the registration and login system */
+app.use(passport.initialize());
+app.use(passport.session());
+app.use(client.middleware());
+
 /* configure some local variables for use later */
 app.use(function(req, res, next) {
+
   res.locals.user = req.user;
   res.locals.next = req.path;
 
-  console.log(req.method + ' ' + req.path);
+  debug.http(req.method + ' ' + req.path);
 
   // TODO: consider moving to a prototype on the response
   res.provide = function(err, resource, options) {
@@ -198,79 +252,17 @@ app.use(function(req, res, next) {
   next();
 });
 
-function requireLogin(req, res, next) {
-  if (req.user) { return next(); }
-  // require the user to log in
-  res.status(401).render('login', {
-    next: req.path
-  });
-}
-
-function setupRepo(req, res, next) {
-  req.pause();
-  req.params.projectSlug = req.params.projectSlug.replace('.git', '');
-  req.params.uniqueSlug = req.param('actorSlug') + '/' + req.param('projectSlug');
-
-  console.log('sup dawg', req.param('uniqueSlug'));
-
-  req.resume();
+var makiFormHandler = function(req, res, next) {
+  var supportedMethods = ['patch'];
+  var proposedMethod = (req.param('method')) ? req.param('method').toLowerCase() : null;
+  if (supportedMethods.indexOf( proposedMethod ) >= 0) {
+    req.method = req.param('method').toUpperCase();
+    // TODO: force use of req.body / req.params?
+    // otherwise, form control seems to utilize query strings / request body
+  }
   next();
 }
-
-function setupPushover(req, res, next) {
-  
-  console.log('SETUP PUSHOVER');
-  
-  req.pause();
-  Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
-    if (err) { console.log(err); }
-    if (!project) { return next(); }
-
-    req.projectID = project._id.toString();
-    req.resume();
-    next();
-  });
-}
-
-
-var pushover = require('./lib/pushover');
-app.repos = pushover( config.git.data.path );
-
-app.repos.on('push', function (push) {
-  console.log('push ' + push.repo + '/' + push.commit
-      + ' (' + push.branch + ')'
-  );
-  push.accept();
-});
-app.repos.on('fetch', function (fetch) {
-  console.log('fetch ' + fetch.commit);
-  fetch.accept();
-});
-
-var gitAcceptRegex = new RegExp('^application/x-git(.*)');
-var gitAgentRegex = new RegExp('^git/(.*)');
-app.get('/:actorSlug/:projectSlug*', setupRepo , setupPushover , function(req, res, next) {
-  
-  console.log(req.headers);
-  
-  console.log('REQ PATH', req.path );
-  console.log('REQ ACCEPT', req.headers.accept );
-  
-  if (!gitAgentRegex.exec( req.headers['user-agent'] ) ) return next();
-  console.log('handling get....');
-  app.repos.handle(req, res);
-});
-app.post('/:actorSlug/:projectSlug*', setupRepo , setupPushover , function(req, res, next) {
-  
-  console.log(req.headers);
-  
-  console.log('REQ PATH', req.path );
-  console.log('REQ ACCEPT', req.headers.accept );
-  
-  if (!gitAcceptRegex.exec( req.headers.accept ) ) return next();
-  console.log('handling post....');
-  app.repos.handle(req, res);
-});
+app.use( makiFormHandler );
 
 app.get('/', pages.index );
 
@@ -301,17 +293,19 @@ app.get('/login', function(req, res) {
 
 /* when a POST request is made to '/register'... */
 app.post('/register', function(req, res, next) {
-  Account.register(new Account({ email : req.body.email, username : req.body.username }), req.body.password, function(err, user) {
+  Account.register(new Account({
+    email : req.body.email,
+    username : req.body.username,
+    emails: [ req.body.emails ]
+  }), req.body.password, function(err, user) {
     if (err) {
       console.log(err);
       return res.render('register', { user : user });
     }
 
-    return res.redirect( next );
-
     req.login( user , function(err) {
-      var next = req.param('next') ? req.param('next') : '/';
-      
+      var path = req.param('next') || '/';
+      return res.redirect( path );
     });
   });
 });
@@ -331,30 +325,123 @@ app.get('/logout', function(req, res, next) {
   res.redirect('/');
 });
 
-app.get('/projects',                          projects.list );
-app.get('/projects/new', requireLogin ,       projects.createForm );
-app.post('/projects',    requireLogin ,       projects.create );
+// I HATE ROUTING.
+// TODO: replace all manual routing with Maki.
 
-app.get('/:actorSlug/:projectSlug',                                 setupRepo, projects.view );
-app.get('/:actorSlug/:projectSlug/tree/:branchName',                setupRepo, projects.view );
-app.get('/:actorSlug/:projectSlug/issues',                          setupRepo, issues.list );
-app.get('/:actorSlug/:projectSlug/issues/:issueID',                 setupRepo, issues.view );
-app.get('/:actorSlug/:projectSlug/issues/new',                      setupRepo, issues.createForm );
-app.post('/:actorSlug/:projectSlug/issues',          requireLogin , setupRepo, issues.create );
+app.get('/projects',                                  projects.list );
+app.get('/projects/new', client.can('authenticate') , projects.createForm );
+app.post('/projects',    client.can('authenticate') , projects.create );
 
-app.post('/:actorSlug/:projectSlug/issues/:issueID/comments', requireLogin , setupRepo, issues.addComment );
+app.get('/:actorSlug/:projectSlug',                                      setupRepo, projects.view );
+app.get('/:actorSlug/:projectSlug/trees/:branchName(*)',                 setupRepo, projects.view );
+app.get('/:actorSlug/:projectSlug/issues',                               setupRepo, issues.list );
+app.get('/:actorSlug/:projectSlug/issues/:issueID',                      setupRepo, issues.view );
 
-//app.get('/:actorSlug/:projectSlug.git/info/refs',               setupRepo , projects.git.refs );
-app.get('/:actorSlug/:projectSlug/blob/:branchName/:filePath',  setupRepo , projects.viewBlob );
-app.get('/:actorSlug/:projectSlug/commit/:commitID',            setupRepo , projects.viewCommit );
+//app.post('/:actorSlug/:projectSlug/issues/:issueID', function() { console.log('fff'); },                    setupRepo, issues.edit );
+app.patch('/:actorSlug/:projectSlug/issues/:issueID',                    setupRepo, issues.edit );
+
+app.get('/:actorSlug/:projectSlug/issues/new',                           setupRepo, issues.createForm );
+app.post('/:actorSlug/:projectSlug/issues', client.can('authenticate') , setupRepo, issues.create );
+
+app.get('/:actorSlug/:projectSlug/diffs',                                                                          setupRepo,               issues.createForm );
+app.get('/:actorSlug/:projectSlug/diffs/:fromBranch%E2%80%A6:upstreamUniqueSlug(*)?', client.can('authenticate') , setupRepo,               issues.diffForm );
+app.post('/:actorSlug/:projectSlug/pulls',                                            client.can('authenticate') , setupRepo, setupProject, issues.createPullRequest );
+
+app.post('/:actorSlug/:projectSlug/issues/:issueID/comments',                         client.can('authenticate') , setupRepo,               issues.addComment );
+
+app.get('/:actorSlug/:projectSlug/blobs/:branchName/:filePath(*)', setupRepo , projects.viewBlob );
+app.get('/:actorSlug/:projectSlug/commits/:commitID',              setupRepo , projects.viewCommit );
 
 app.get('/people', people.list);
 
-app.get('/:organizationSlug', organizations.view );
-app.get('/:usernameSlug',     people.view );
+app.get('/:organizationSlug',      organizations.view );
+app.get('/:usernameSlug',          people.view );
+app.get('/:usernameSlug/keys/new', keys.createForm );
+app.post('/:usernameSlug/keys',    keys.create );
+
+
+app.post('/:usernameSlug/emails',   client.can('authenticate') , people.addEmail );
+app.delete('/:usernameSlug/emails', client.can('authenticate') , people.removeEmail );
+
+function setupRepo(req, res, next) {
+  req.params.projectSlug = req.params.projectSlug.replace('.git', '');
+  req.params.uniqueSlug = req.param('actorSlug') + '/' + req.param('projectSlug');
+  next();
+}
+
+function setupProject(req, res, next) {
+  req.pause();
+  Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
+    if (err) { debug.http(err); }
+    if (!project) { return next(); }
+
+    req.projectID = project._id.toString();
+    req.project = project;
+    
+    req.resume();
+    next();
+  });
+}
+
+var pushover = require('pushover');
+app.repos = pushover( config.git.data.path );
+
+app.repos.on('push', function (push) {
+  debug.git('push ' + push.repo + '/' + push.commit
+      + ' (' + push.branch + ')'
+  );
+  push.accept();
+});
+app.repos.on('fetch', function (fetch) {
+  debug.git('fetch ' + fetch.commit);
+  fetch.accept();
+});
+
+var gitAcceptRegex = new RegExp('^application/x-git(.*)');
+var gitAgentRegex  = new RegExp('^git/(.*)');
+app.get('/:actorSlug/:projectSlug*', setupRepo , setupProject , function(req, res, next) {
+  if (!gitAgentRegex.exec( req.headers['user-agent'] ) ) return next();
+  debug.git('pushover handling get...');
+  app.repos.handle(req, res);
+});
+app.post('/:actorSlug/:projectSlug*', setupRepo , setupProject , client.can('git push') , function(req, res, next) {
+  if (!gitAcceptRegex.exec( req.headers.accept ) ) return next();
+  debug.git('pushover handling post...');
+  app.repos.handle(req, res);
+});
 
 app.get('*', function(req, res) {
   res.status(404).render('404');
 });
 
-app.listen( config.http.port );
+var WebSocketServer = require('maki-service-websockets');
+var Queue           = require('maki-queue');
+
+// Maki stub
+// TODO: implement proper Maki
+// maki exposes a lot of this automatically...
+// TODO: document using Maki this way
+var maki = {
+  debug: true ,
+  app: app ,
+  routes: {
+    '/projects': null // not really maki, just use a null handler
+  },
+  config: {
+    redis: config.redis
+  },
+  clients: {},
+  JSONRPC: require('maki-jsonrpc')
+};
+maki.httpd = require('http').createServer( maki.app );
+maki.socks = new WebSocketServer();
+maki.queue = new Queue({
+  database: {
+    name: config.databaseName
+  }
+});
+
+maki.socks.bind( maki );
+maki.queue.bind( maki );
+
+maki.httpd.listen( config.http.port );

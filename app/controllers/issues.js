@@ -1,3 +1,5 @@
+var crypto = require('crypto');
+
 module.exports = {
   list: function(req, res, next) {
     Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
@@ -54,12 +56,208 @@ module.exports = {
       });
     });
   },
+  edit: function(req, res, next) {
+    Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
+      if (!project) return next();
+
+      Issue.findOne({ _project: project._id, id: req.param('issueID') }).exec(function(err, issue) {
+        if (!issue) { return next(); }
+          
+        // TODO: only merge when merge required
+        var repo = git( project.path );
+        
+        var downstreamParts = issue.data.from.split('/');
+        var toParts         = issue.data.to.split('/');
+        
+        var fromPath = downstreamParts.slice(0, 2).join('/');
+        Project.lookup({ uniqueSlug: fromPath }, function(err, downstream) {
+          
+          debug.git('project: ', project);
+          debug.git('executing merge ' , fromPath + '/' + downstreamParts[2] );
+          
+          var tmpPath = '/tmp/' + crypto.randomBytes(20).toString('hex');
+          
+          debug.git('cloning ' , project.path , tmpPath );
+          
+          git.clone( tmpPath , project.path , function(err) {
+            if (err) console.log(err);
+            
+            var tmp = git( tmpPath );
+            tmp.remote.add('downstream', downstream.path , function(err) {
+              if (err) console.log(err);
+              
+              tmp.fetch('downstream', function(err) {
+                if (err) console.log(err);
+                
+                debug.git('fetched...');
+                
+                tmp.checkout( toParts[ 2 ] , function(err) {
+                  if (err) console.log(err);
+                  
+                  debug.git('checked out...');
+                  //var msg = 'Merge branch \''+downstreamParts[ 2 ]+'\' of ' + config.http.host + ':' + fromPath + ' into ' + ;
+                  
+                  var msg = 'Merge pull request #' + issue.id + ' from ' + issue.data.from;
+                  var author = req.user.username + ' <' + req.user.email + '>' ;
+                  
+                  debug.git('message will be ', msg );
+                  debug.git('author will be ', author );
+                  
+                  tmp.merge( 'downstream/' + downstreamParts[ 2 ] , [
+                    '-m "'+msg+'"',
+                    '--no-ff',
+                  ], function(err) {
+                    if (err) console.log(err);
+                    
+                    debug.git('merged...');
+                    
+                    tmp.changeAuthor( author , function(err) {
+                      if (err) console.log(err);
+                      
+                      debug.git('changed author...');
+                      
+                      tmp.push('origin', toParts[ 2 ] , [] , function(err, success) {
+                        if (err) console.log(err);
+                        
+                        debug.git('pushed...', success);
+                        
+                        ['status'].forEach(function(field) {
+                          // TODO: force use of req.body / req.params?
+                          // otherwise, form control seems to utilize query strings / request body
+                          issue[ field ] = req.body[ field ];
+                        });
+                        issue.save(function(err) {
+                          if (err) console.log(err);
+                          res.redirect( req.path );
+                        });
+                        
+                      });
+                    });
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
+      
+    });
+  },
+  createPullRequest: function(req, res, next) {
+    var requiredFields = [
+      'originalSlug',
+      'fromBranch',
+      'toBranch'
+    ];
+    
+    var request = new Issue({
+      name: req.param('name'),
+      description: req.param('description'),
+      type: 'dock',
+      _project: req.project._id,
+      _creator: req.user._id,
+      data: {
+        from: req.param('originalSlug') + '/' + req.param('fromBranch'),
+        to: req.param('uniqueSlug') + '/' + req.param('toBranch')
+      }
+    });
+    
+    request.save(function(err) {
+      if (err) console.log(err);
+      res.redirect('/' +  req.param('uniqueSlug') + '/issues/ ' + request.id );
+    });
+  },
+  diffForm: function(req, res, next) {
+    Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
+      if (!project) return next();
+
+      var collectors = [];
+      var parts = [];
+      
+      var repo = git( project.path );
+      
+      if (req.param('upstreamUniqueSlug')) {
+        parts = req.param('upstreamUniqueSlug').split('/');
+      }
+        
+      // push a collector that selects an appropriate pull request destination
+      collectors.push( function(done) {
+        var query = {};
+        
+        // determine target of the pull request
+        // falls back to pull requesting to local
+        if (parts.length >= 2) {
+          query = { uniqueSlug: parts.slice(0, 2).join('/') };
+        } else if (project._upstream) {
+          query = { _id: project._upstream._id }
+        } else {
+          query = { _id: project._id }
+        }
+
+        Project.lookup( query , function(err, upstream) {
+          console.log(err, upstream);
+          done(err, upstream)
+        });
+      } );
+      
+      async.parallel( collectors , function(err, results) {
+        if (err) return next(err);
+        
+        var upstream = results[0];
+        
+        var fromBranch = req.param('fromBranch') || 'master';
+        var toBranch = parts[2] || 'master';
+        
+        var upstreamUniqueSlug = upstream._owner.slug + '/' + upstream.slug;
+        
+        repo.remote.add( upstreamUniqueSlug , upstream.path , function(err) {
+          if (err) { console.log(err); }
+            
+          // must fetch before diff works
+          // I didn't realize this until after I'd switched remote names,
+          // thinking that we couldn't diff because the mongoID looks similar to
+          // a commit hash... I was wrong, but haven't refactored this yet.
+          // OTOH perhaps diffs should be run against the server's http route...
+          // TODO: consider switching back to _id as the remote name
+          repo.fetch( upstreamUniqueSlug , function(err) {
+            if (err) console.log(err);
+            
+            repo.diffBranches( fromBranch , upstreamUniqueSlug + '/' + toBranch , function(err, changes) {
+              if (err) { console.log(err , changes); }
+                
+              async.map( changes , function( commit , done ) {
+                Account.lookup( commit.author , function(err, author) {
+                  commit._author = author;
+                  done( err , commit );
+                });
+              }, function(err, results) {
+                res.render('pull-request-new', {
+                  original: project,
+                  upstream: upstream,
+                  fromBranch: fromBranch,
+                  toBranch: toBranch,
+                  changes: changes
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+  },
   createForm: function(req, res, next) {
     Project.lookup({ uniqueSlug: req.param('uniqueSlug') }, function(err, project) {
-      if (!project) { return next(); }
-
-      res.render('issue-new', {
-        project: project
+      if (!project) return next();
+      var collectors = [];
+      
+      async.parallel( collectors , function(err, results) {
+        if (err) return next(err);
+        
+        res.render('issue-new', {
+          project: project,
+          original: project,
+          upstream: results[0]
+        });
       });
 
     });

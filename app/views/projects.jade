@@ -1,12 +1,17 @@
 extends layout
 
 block content
+  .row
+    .col-md-12
+      a.btn.btn-default.pull-right(href="/projects/new") Create New &raquo;
 
-  a.btn.btn-default.pull-right(href="/projects/new") Create New &raquo;
-
-  h1
-    a(href="/projects") Projects
+      h1
+        a(href="/projects")
+          i.fa.fa-flask
+          |  Projects
 
   .row
-    each project in projects
-      include partials/project
+    .col-md-12
+      ul.list-group
+        each project in projects
+          include partials/project-row
