@@ -326,7 +326,7 @@ module.exports = {
 
     if (req.param('fromProjectID')) {
       Project.findOne({ _id: req.param('fromProjectID') }).exec(function(err, upstream) {
-        preSaveCommand = 'cp -r ' + upstream.path + ' ' + project.path;
+        preSaveCommand = 'cp -r ' + upstream.path.replace(/\s/g, "\\ ") + ' ' + project.path.replace(/\s/g, "\\ ");
 
         project._upstream = upstream._id;
 
