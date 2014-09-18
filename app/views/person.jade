@@ -17,7 +17,7 @@ block content
           a.btn.btn-default(href="/auth/google")
             i.fa.fa-google-plus
             |  Add Google Profile &raquo;
-      
+
       if (user && person._id.toString() === user._id.toString())
         h4 Emails (only visible to you)
         .emails.list-group
@@ -37,26 +37,27 @@ block content
                 input.form-control(name="email", type="email", required)
                 .input-group-btn
                   button.btn.btn-default(type="submit") Add &raquo;
-                
+
             p Emails are used to identify you in commits.
 
     .col-md-9
-      h2 
+      h2
         i.fa.fa-flask
         |  Projects
       ul.list-group
         each project in projects
           li.list-group-item
             include partials/project
-      h2 
-        i.fa.fa-flask
-        | SSH Keys
-        a(href="/#{user.slug}/keys/new")
-          button.btn.btn-default Add &raquo;
-      ul.list-group
-        each key in keys
-          li.list-group-item
-            include partials/ssh-key
+      if (user)
+        h2
+          i.fa.fa-flask
+          | SSH Keys
+          a(href="/#{user.slug}/keys/new")
+            button.btn.btn-default Add &raquo;
+        ul.list-group
+          each key in keys
+            li.list-group-item
+              include partials/ssh-key
 
   if (user && person._id.toString() === user._id.toString())
     script.
@@ -73,4 +74,3 @@ block content
         });
         return false;
       });
-      

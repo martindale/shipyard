@@ -18,7 +18,7 @@ module.exports = {
           return x;
         });
 
-        if (person._id.toString() == req.user._id.toString()) {
+        if (req.user && person._id.toString() == req.user._id.toString()) {
           PublicKey.find({_owner: req.user._id}).exec(function(err, keys) {
             res.provide( err, {
               person: person
@@ -38,7 +38,7 @@ module.exports = {
             template: 'person'
           });
         }
-        
+
       });
     });
   },
@@ -46,7 +46,7 @@ module.exports = {
   // or, just use Maki.
   addEmail: function(req, res, next) {
     if (!req.param('email')) return next(400);
-    
+
     People.findOneAndUpdate({
       slug: req.param('usernameSlug')
     }, {
