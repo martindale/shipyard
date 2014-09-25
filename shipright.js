@@ -252,17 +252,8 @@ app.use(function(req, res, next) {
   next();
 });
 
-var makiFormHandler = function(req, res, next) {
-  var supportedMethods = ['patch'];
-  var proposedMethod = (req.param('method')) ? req.param('method').toLowerCase() : null;
-  if (supportedMethods.indexOf( proposedMethod ) >= 0) {
-    req.method = req.param('method').toUpperCase();
-    // TODO: force use of req.body / req.params?
-    // otherwise, form control seems to utilize query strings / request body
-  }
-  next();
-}
-app.use( makiFormHandler );
+// special form handler to convert POST verbs into PATCH, etc.
+app.use( require('maki-forms') );
 
 app.get('/', pages.index );
 
